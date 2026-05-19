@@ -1,11 +1,15 @@
 const mongoose = require("mongoose");
 
-const accountTransactionSchema = new mongoose.Schema(
+const transactionSchema = new mongoose.Schema(
   {
-    userId: {
+    fromAccount: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "auth",
-      required: true,
+      ref: "Account",
+    },
+
+    toAccount: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Account",
     },
 
     transactionType: {
@@ -37,6 +41,6 @@ const accountTransactionSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model(
-  "accountTransaction",
-  accountTransactionSchema
+  "Transaction",
+  transactionSchema
 );
