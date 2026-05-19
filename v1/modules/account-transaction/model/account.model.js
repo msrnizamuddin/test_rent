@@ -7,6 +7,12 @@ const accountSchema = new mongoose.Schema(
       ref: "auth",
       required: true,
     },
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      trim: true,
+      ref: "tenant",
+    },
 
     accountNumber: {
       type: String,
@@ -43,4 +49,4 @@ const accountSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Account", accountSchema);
+module.exports = mongoose.model("account", accountSchema);

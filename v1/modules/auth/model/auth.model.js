@@ -7,6 +7,12 @@ const authSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      trim: true,
+      ref: "tenant",
+    },
 
     email: {
       type: String,
