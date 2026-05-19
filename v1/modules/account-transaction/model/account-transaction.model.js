@@ -37,6 +37,6 @@ const accountTransactionSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model(
-  "AccountTransaction",
+  "accountTransaction",
   accountTransactionSchema
 );
