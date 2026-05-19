@@ -29,8 +29,8 @@ const authSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["Su", "user"],
-      default: "user",
+      enum: ["Super Admin", "Tenant"],
+      default: "Tenant",
     },
 
     isActive: {
