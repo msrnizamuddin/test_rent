@@ -9,9 +9,8 @@ const authSchema = new mongoose.Schema(
     },
     tenantId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      trim: true,
       ref: "tenant",
+      required: true,
     },
 
     email: {
@@ -25,18 +24,23 @@ const authSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
-      minlength: 6,
+      minlength: 8,
     },
 
     role: {
       type: String,
-      enum: ["admin", "user"],
+      enum: ["Su", "user"],
       default: "user",
     },
 
     isActive: {
       type: Boolean,
       default: true,
+    },
+    centralStatus: {
+      type: String,
+      enum: ["active", "inactive", "deleted"],
+      default: "active",
     },
   },
   {
