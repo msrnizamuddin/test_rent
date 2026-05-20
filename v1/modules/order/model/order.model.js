@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
 
 export const OrderSchema = new mongoose.Schema({
+    tenantId: {
+        type: String,
+        required: true,
+        index: true
+    },
     customer: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",

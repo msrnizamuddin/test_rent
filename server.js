@@ -6,10 +6,7 @@ import helmet from "helmet";
 import { env } from "./config/env.js";
 import { connectDB } from "./config/db.js";
 import router from "./route.js";
-import Order from "./v1/modules/order/model/order.model.js";
-import { Ticket, Message } from "./v1/modules/customer-support/model/support.model.js";
-console.log("Order Model loaded", Order.modelName);
-console.log("Support Models loaded", Ticket.modelName, Message.modelName);
+
 
 
 const app = express();
