@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 import authModel from "../model/auth.model.js";
 
 import generateToken from "../../../utils/jwt.js";
@@ -18,6 +19,14 @@ export const registerUser = async (payload) => {
     email: user.email,
     role: user.role,
   });
+  // decode token to get expiration (exp is in seconds)
+  const decoded = jwt.decode(token);
+  const tokenExpiration = decoded && decoded.exp ? new Date(decoded.exp * 1000) : null;
+
+  // persist token and expiration on the user record
+  user.clientLoginToken = token;
+  if (tokenExpiration) user.tokenExpiration = tokenExpiration;
+  await user.save();
 
   return {
 
@@ -33,8 +42,15 @@ export const loginUser = async (user) => {
     email: user.email,
     role: user.role,
   });
+  // decode token to get expiration
+  const decoded = jwt.decode(token);
+  const tokenExpiration = decoded && decoded.exp ? new Date(decoded.exp * 1000) : null;
 
-  user.password = undefined;
+  // persist token and expiration on the user record
+  user.clientLoginToken = token;
+  if (tokenExpiration) user.tokenExpiration = tokenExpiration;
+  await user.save();
+
 
   return {
     token,

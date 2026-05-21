@@ -40,8 +40,38 @@ const authSchema = new mongoose.Schema(
     },
     centralStatus: {
       type: String,
-      enum: ["active", "inactive", "deleted"],
+      enum: ["active", "inactive"],
       default: "active",
+    },
+    domain: {
+      type: String,
+      trim: true,
+    },
+    clientLoginToken: {
+      type: String,
+    },
+    tokenExpiration: {
+      type: Date,
+    },
+    supportedLanguages: {
+      type: [String],
+      default: [],
+    },
+    supportedCurrency: {
+      type: [String],
+      default: [],
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "auth",
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "auth",
+    },
+    verificationToken: {
+      type: String,
+      select: false,
     },
   },
   {
