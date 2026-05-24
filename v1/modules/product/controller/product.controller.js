@@ -1,156 +1,158 @@
 import Product from "../model/product.model.js";
 
-const createProduct = async (req, res) => {
-    try {
-        const {
-            name,
-            sku,
-            category,
-            brand,
-            unit,
-            barcode,
-            images,
-            thumbnail,
-            pricing,
-        } = req.body
+export const createProduct = async (req, res) => {
+  try {
+    // const tenantId = req.user?.tenantId;
+    // const createdBy = req.user?._id;
+    const tenantId = req.body.tenantId || "dummy-tenant-uuid-12345";
+    const createdBy = req.body.createdBy || null;
 
-        const tenantId = req.user.tenantId;
-        // const tenantId = req.body.tenantId || "60d5ecb8b392d71134e9e09b"; for testing without auth
-
-        if (!name || !category || !pricing || !unit) {
-            return res.status(400).json({
-                success: false,
-                message: "Please provide all required fields"
-            }); 
-        }
-
-        const newProduct = await Product.create({
-            tenantId,
-            name,
-            sku,
-            category,
-            brand,
-            unit,
-            barcode,
-            images,
-            thumbnail,
-            pricing,
-        });
-
-        return res.status(201).json({
-            success: true,
-            message: "Product created successfully",
-        });
-
-    } catch (error) {
-        console.log("Error creating product:", error);
-
-        if (error.code === 11000) {
-            return res.status(400).json({
-                success: false,
-                message: "Product SKU or Barcode already exists",
-            });
-        }
-
-        return res.status(500).json({
-            success: false,
-            message: "Internal Server Error",
-            error: error.message
-        });
+    if (!tenantId) {
+      return res.status(401).json({
+        success: false,
+        message: "No tenantId found in the request",
+      });
     }
+
+    if (!req.body.productName || !req.body.productSlug) {
+      return res.status(400).json({
+        success: false,
+        message: "Product name and slug are required"
+      });
+    }
+
+    const productData = {
+      ...req.body,
+      tenantId: tenantId,
+      createdBy: createdBy,
+      updatedBy: createdBy,
+    };
+
+    const newProduct = new Product(productData);
+    const savedProduct = await newProduct.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      data: savedProduct
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Product with this slug already exists",
+      });
+    }
+
+    console.error("Internal server error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
 };
 
-const getAllProducts = async (req, res) => {
+export const getAllProducts = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
-    //const tenantId = "60d5ecb8b392d71134e9e09b"; // for testing without auth
-    const products = await Product.find({ tenantId: tenantId });
+    // const tenantId = req.user?.tenantId;
+    const tenantId = req.body?.tenantId || req.query?.tenantId || "my-company-uuid-001";
+
+    if (!tenantId) {
+      return res.status(401).json({
+        success: false,
+        message: "No tenantId found in the request",
+      });
+    }
+
+    const products = await Product.find({
+      tenantId: tenantId,
+      centralStatus: "active",
+    })
+      .populate("productBrand", "name slug")
+      .populate("productCategory", "name slug")
+      .sort({ createdAt: -1 })  // newest first
+
     return res.status(200).json({
       success: true,
       count: products.length,
-      data: products,
+      message: "Products fetched successfully",
+      data: products
     });
+
   } catch (error) {
     console.error("Error fetching products:", error);
     return res.status(500).json({
       success: false,
-      message: "An internal server error occurred while fetching the products.",
+      message: "Internal server error",
       error: error.message,
     });
   }
 };
 
-
-const getProductById = async (req, res) => {
+export const updateProduct = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
-    //const tenantId = "60d5ecb8b392d71134e9e09b"; for testing without auth
-    const product = await Product.findOne({ 
-      tenantId: tenantId 
-    });
-    if (!product) {
-      return res.status(404).json({
+    console.log("Incoming Update Data from Postman:", req.body);
+    const productId = req.params.id;
+    // const tenantId = req.user?.tenantId;
+    // const updatedBy = req.user?._id;
+    const tenantId = req.body?.tenantId || req.query?.tenantId || "my-company-uuid-001";
+    const updatedBy = req.body?.updatedBy || null;
+
+    if (!tenantId) {
+      return res.status(401).json({
         success: false,
-        message: "Product not found or you do not have permission to view it.",
+        message: "No tenantId found in the request",
       });
     }
-    return res.status(200).json({
-      success: true,
-      data: product,
-    });
-    
-  } catch (error) {
-    console.error("Error fetching single product:", error);
-    if (error.kind === "ObjectId") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid product ID format.",
-      });
-    }
+    const updateData = {
+      ...req.body,
+      updatedBy: updatedBy,
+    };
 
-    return res.status(500).json({
-      success: false,
-      message: "An internal server error occurred while fetching the product.",
-      error: error.message,
-    });
-  }
-};
+    delete updateData.tenantId;
+    delete updateData.createdBy;
+    console.log("Data going to MongoDB:", updateData);
 
-
-const updateProduct = async (req, res) => {
-  try {
- 
-    const tenantId = req.user.tenantId; 
-    //const tenantId = "60d5ecb8b392d71134e9e09b"; for testing without auth
-    const updatedProduct = await Product.findOneAndUpdate(
-      { tenantId: tenantId }, 
-      req.body,               
-      { 
-        new: true,           
-        runValidators: true  
+    const updatedProduct = await Product.findByIdAndUpdate(
+      {
+        _id: productId,
+        tenantId: tenantId
+      },
+      {
+        $set: updateData
+      },
+      {
+        new: true,
+        runValidators: true
       }
-    );
+    ).populate("productBrand productCategory");
+
     if (!updatedProduct) {
       return res.status(404).json({
         success: false,
-        message: "No products found for this company to update.",
+        message: "Product not found or you don't have permission to update."
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Product updated successfully!",
+      message: "Product updated successfully",
       data: updatedProduct,
     });
-    
   } catch (error) {
-    console.error("Error updating product:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Product with this slug already exists",
+      });
+    }
+
+    console.error("Internal server error:", error);
     return res.status(500).json({
       success: false,
-      message: "An internal server error occurred while updating the product.",
+      message: "Internal server error",
       error: error.message,
     });
   }
 };
-
-export { createProduct, getAllProducts, getProductById, updateProduct };

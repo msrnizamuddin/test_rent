@@ -1,72 +1,113 @@
 import mongoose from "mongoose";
 
-const productSchema = new mongoose.Schema(
-  {
+const { Schema } = mongoose;
 
+const productSchema = new Schema(
+  {
     tenantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Tenant", 
-      required: true,
-    },
-    name: {
       type: String,
       required: true,
-      trim: true,
+      index: true,
     },
-    sku: {
+    centralStatus: {
       type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+    status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+    productName: {
+      type: Object,
+      required: true,
+    },
+    productSlug: {
+      type: String,
+      required: true,
       unique: true,
-      sparse: true,
-      uppercase: true, 
-      trim: true,
     },
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category", 
-      required: true,
+    productImage: {
+      type: String,
     },
-    brand: {
-      type: mongoose.Schema.Types.ObjectId,
+    productGallery: {
+      type: [String],
+      default: [],
+    },
+    productStyle: {
+      type: Array,
+      default: [],
+    },
+    productFeaturesStatus: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+    productDescription: {
+      type: String,
+    },
+    productShortDescription: {
+      type: String,
+    },
+    productCategory: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+    },
+    productSubCategory: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+    },
+    productChildCategory: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+    },
+    productBrand: {
+      type: Schema.Types.ObjectId,
       ref: "Brand",
     },
-    unit: {
-      type: String, 
-      required: true,
+    productFeatures: {
+      type: Array,
+      default: [],
     },
-    barcode: {
+    productOrderQuantity: {
+      type: Number,
+      default: 0,
+    },
+    productYoutueURL: {
       type: String,
-      unique: true,
-      sparse: true, 
     },
-    images: [
-      {
-        type: String, 
-      }
-    ],
-    thumbnail: {
-      type: String, 
+    productHowToCare: {
+      type: String,
     },
-    pricing: {
-      purchasePrice: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
-      retailPrice: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
-      wholesalePrice: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
-      dealerPrice: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
+    deliveryInstructions: {
+      type: String,
+    },
+    inventoryItems: {
+      type: Schema.Types.ObjectId,
+      ref: "Inventory",
+    },
+    seoKeywords: {
+      type: [String],
+      default: [],
+    },
+    metaTitle: {
+      type: String,
+    },
+    metaDescription: {
+      type: String,
+    },
+    productTags: {
+      type: [String],
+      default: [],
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
     },
   },
   {
