@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const { Schema } = mongoose;
 
-const categorySchema = new Schema(
+const subCategorySchema = new Schema(
   {
     tenantId: {
       type: String, // UUID
@@ -12,7 +12,7 @@ const categorySchema = new Schema(
     type : {
       type : String,
       required : true,
-      enum : "Parent" 
+      enum : "Sub" 
     },
     centralStatus: {
       type: String,
@@ -53,5 +53,5 @@ const categorySchema = new Schema(
   }
 );
 
-const Category = mongoose.model('Category', categorySchema);
-export default Category;
+const SubCategory = mongoose.model('SubCategory', subCategorySchema);
+export default SubCategory;
