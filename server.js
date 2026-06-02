@@ -7,6 +7,8 @@ import { env } from "./config/env.js";
 import { connectDB } from "./config/db.js";
 import router from "./route.js";
 
+
+
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
