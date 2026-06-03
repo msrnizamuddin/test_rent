@@ -13,6 +13,32 @@
   "email": "shop@example.com",
   "plan": "basic"
 }
+
+### Get All Tenants URL
+`GET /api/v1/tenant/getTenant`
+
+No request body needed.
+Success Response (200):
+json{
+  "success": true,
+  "data": [ ...tenants ]
+}
+
+### Update Tenant URL
+`PATCH  /api/v1/tenant/updateTenant/:tenantId`
+
+{
+  "shopName": "New Shop Name",
+  "status": "inactive",
+  "plan": "pro"
+}
+* Success Response (200):
+{
+  "success": true,
+  "message": "✅ Tenant updated successfully",
+  "data": { ...updatedTenant }
+}
+
 # SBR Central Server — Product Module API
 
 This module handles **Product** management for the SBR multi-tenant system. All endpoints are scoped to the authenticated tenant via `tenantId`.
