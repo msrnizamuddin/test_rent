@@ -1,69 +1,103 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import authModel from "../model/auth.model.js";
 
-import generateToken from "../../../utils/jwt.js";
+import Auth from "../model/auth.model.js";
+import Tenant from "../../tenent/model/tenent.model.js";
 
-export const registerUser = async (payload) => {
- 
+export const registerService = async (payload) => {
+  const session = await mongoose.startSession();
 
+  try {
+    session.startTransaction();
 
-  const createData = { ...payload };
+    const tenant = await Tenant.create(
+      [
+        {
+          fullName: payload.fullName,
+          businessName: payload.businessName,
+          businessEmail: payload.businessEmail,
+          createdBy: null,
+          updatedBy: null,
+        },
+      ],
+      { session },
+    );
 
-  const user = await authModel.create(createData);
+    const hashedPassword = await bcrypt.hash(payload.password, 10);
 
-  // generate token
-  const token = generateToken({
-    id: user._id,
-    tenantId: user.tenantId,
-    email: user.email,
-    role: user.role,
-  });
-  // decode token to get expiration (exp is in seconds)
-  const decoded = jwt.decode(token);
-  const tokenExpiration = decoded && decoded.exp ? new Date(decoded.exp * 1000) : null;
+    const auth = await Auth.create(
+      [
+        {
+          tenantId: tenant[0].tenantId,
+          userType: payload.userType,
+          emailOrPhone: payload.emailOrPhone,
+          password: hashedPassword,
+          supportedLanguages: payload.supportedLanguages || [],
+          supportedCurrency: payload.supportedCurrency || [],
+        },
+      ],
+      { session },
+    );
 
-  // persist token and expiration on the user record
-  user.clientLoginToken = token;
-  if (tokenExpiration) user.tokenExpiration = tokenExpiration;
-  await user.save();
+    await session.commitTransaction();
 
-  return {
-
-  };
+    return {
+      tenant: tenant[0],
+      auth: auth[0],
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
 };
 
-export const loginUser = async (user) => {
-  // Expect a validated/verified `user` object to be passed in by the controller.
+export const loginService = async ({ emailOrPhone, password }) => {
+  // only required fields select
+  const user = await Auth.findOne({
+    emailOrPhone,
+    centralStatus: "active",
+  }).select(
+    "_id tenantId userType emailOrPhone password supportedLanguages supportedCurrency",
+  );
 
-  const token = generateToken({
-    id: user._id,
-    tenantId: user.tenantId,
-    email: user.email,
-    role: user.role,
-  });
-  // decode token to get expiration
-  const decoded = jwt.decode(token);
-  const tokenExpiration = decoded && decoded.exp ? new Date(decoded.exp * 1000) : null;
+  if (!user) {
+    throw new Error("Invalid credentials");
+  }
 
-  // persist token and expiration on the user record
-  user.clientLoginToken = token;
-  if (tokenExpiration) user.tokenExpiration = tokenExpiration;
-  await user.save();
+  const isMatch = await user.comparePassword(password);
 
+  if (!isMatch) {
+    throw new Error("Invalid credentials");
+  }
+
+  const token = jwt.sign(
+    {
+      id: user._id,
+      tenantId: user.tenantId,
+      userType: user.userType,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" },
+  );
+
+  // convert to plain object
+  const userObj = user.toObject();
+
+  // remove password before sending response
+  delete userObj.password;
+  delete userObj._id;
 
   return {
     token,
-    user: {
-      id: user._id,
-      tenantId: user.tenantId,
-      email: user.email,
-      role: user.role,
-    },
+    user: userObj,
   };
 };
 
-export default {
-  registerUser,
-  loginUser,
+export const getAllUsersService = async () => {
+  const users = await Auth.find().select("-password -__v ");
+
+  return users;
 };
