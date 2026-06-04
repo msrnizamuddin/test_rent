@@ -420,7 +420,7 @@ The following auth endpoints were added for central user management.
 
 - **Get all users**
 
-  - **URL**: `/api/v1/auth/user`
+  - **URL**: `/api/v1/auth/user?page=(value)&limit=(value)` 
   - **Method**: `GET`
   - **Body**: none
   - **Success (200)**: returns an array of users (passwords omitted).
