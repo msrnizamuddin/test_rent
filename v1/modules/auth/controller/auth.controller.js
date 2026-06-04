@@ -41,12 +41,13 @@ export const login = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await getAllUsersService();
+    const result = await getAllUsersService(req.query);
 
     res.status(200).json({
       success: true,
       message: "Users fetched successfully",
-      data: users,
+      data: result.users,
+      meta: result.meta,
     });
   } catch (error) {
     res.status(500).json({

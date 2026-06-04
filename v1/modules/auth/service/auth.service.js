@@ -57,11 +57,11 @@ export const registerService = async (payload) => {
 export const loginService = async ({ emailOrPhone, password }) => {
   // only required fields select
   const user = await Auth.findOne({
-    emailOrPhone,
-    centralStatus: "active",
-  }).select(
-    "_id tenantId userType emailOrPhone password supportedLanguages supportedCurrency",
-  );
+  emailOrPhone,
+  centralStatus: "active",
+}).select(
+  "+password tenantId userType emailOrPhone supportedLanguages supportedCurrency"
+);
 
   if (!user) {
     throw new Error("Invalid credentials");
@@ -96,10 +96,30 @@ export const loginService = async ({ emailOrPhone, password }) => {
   };
 };
 
-export const getAllUsersService = async () => {
-  const users = await Auth.find().select("-password -__v ");
+export const getAllUsersService = async (query) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const skip = (page - 1) * limit;
 
-  return users;
+  const [users, total] = await Promise.all([
+    Auth.find()
+      .select("-password -__v")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 }),
+
+    Auth.countDocuments(),
+  ]);
+
+  return {
+    users,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 export const updateUserService = async (id, payload) => {
@@ -113,17 +133,25 @@ export const updateUserService = async (id, payload) => {
   ];
 
   const update = {};
+
   Object.keys(payload || {}).forEach((key) => {
-    if (allowedFields.includes(key)) update[key] = payload[key];
+    if (allowedFields.includes(key)) {
+      update[key] = payload[key];
+    }
   });
 
   if (Object.keys(update).length === 0) {
     throw new Error("No valid fields provided for update");
   }
 
-  const user = await Auth.findByIdAndUpdate(id, update, { new: true }).select(
-    "-password -__v",
-  );
+  if (update.password) {
+    update.password = await bcrypt.hash(update.password, 10);
+  }
+
+  const user = await Auth.findByIdAndUpdate(id, update, {
+    new: true,
+    runValidators: true,
+  }).select("-password");
 
   if (!user) {
     throw new Error("User not found");
