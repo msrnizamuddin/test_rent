@@ -400,6 +400,65 @@ This module handles user authentication (registration and login) for the SBR mul
 
 ---
 
+## Warehouse Module
+
+The `warehouse` module provides endpoints to manage warehouses for tenants.
+
+**Base URL**
+
+```
+/api/v1/warehouse
+```
+
+Add or consult the `v1/modules/warehouse` routes for available operations (create, list, update, etc.).
+
+---
+
+## Additional Auth Endpoints
+
+The following auth endpoints were added for central user management.
+
+- **Get all users**
+
+  - **URL**: `/api/v1/auth/user`
+  - **Method**: `GET`
+  - **Body**: none
+  - **Success (200)**: returns an array of users (passwords omitted).
+
+- **Update user (patch)**
+
+  - **URL**: `/api/v1/auth/user/:id`
+  - **Method**: `PATCH`
+  - **Headers**: `Content-Type: application/json` (and `Authorization: Bearer <token>` if protected)
+  - **Allowed fields**:
+    - `centralStatus` ("active" | "inactive")
+    - `supportedLanguages` (array of strings)
+    - `supportedCurrency` (array of strings)
+    - `emailOrPhone` (string)
+    - `userType` ("superadmin" | "tenant")
+
+  - **Body examples**:
+
+    Update status:
+    ```json
+    { "centralStatus": "inactive" }
+    ```
+
+    Update languages and currency:
+    ```json
+    { "supportedLanguages": ["en","fr"], "supportedCurrency": ["USD","EUR"] }
+    ```
+
+    Change email/phone:
+    ```json
+    { "emailOrPhone": "new.email@example.com" }
+    ```
+
+  - **Success (200)**: returns the updated user object (password omitted).
+
+
+---
+
 ## Register API
 
 | Endpoint | Method | Description            |

@@ -29,7 +29,7 @@ export const registerService = async (payload) => {
     const auth = await Auth.create(
       [
         {
-          tenantId: tenant[0].tenantId,
+          tenantId: tenant[0]._id,
           userType: payload.userType,
           emailOrPhone: payload.emailOrPhone,
           password: hashedPassword,
@@ -100,4 +100,34 @@ export const getAllUsersService = async () => {
   const users = await Auth.find().select("-password -__v ");
 
   return users;
+};
+
+export const updateUserService = async (id, payload) => {
+  const allowedFields = [
+    "password",
+    "centralStatus",
+    "supportedLanguages",
+    "supportedCurrency",
+    "emailOrPhone",
+    "userType",
+  ];
+
+  const update = {};
+  Object.keys(payload || {}).forEach((key) => {
+    if (allowedFields.includes(key)) update[key] = payload[key];
+  });
+
+  if (Object.keys(update).length === 0) {
+    throw new Error("No valid fields provided for update");
+  }
+
+  const user = await Auth.findByIdAndUpdate(id, update, { new: true }).select(
+    "-password -__v",
+  );
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  return user;
 };

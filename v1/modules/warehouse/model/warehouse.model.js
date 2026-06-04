@@ -5,16 +5,11 @@ const { Schema } = mongoose;
 const warehouseSchema = new Schema(
     {
         tenantId: {
-            type: String, // UUID
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Tenant",
             required: true,
-            index: true,
         },
         centralStatus: {
-            type: String,
-            enum: ['active', 'inactive'],
-            default: 'active',
-        },
-        status: {
             type: String,
             enum: ['active', 'inactive'],
             default: 'active',
