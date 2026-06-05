@@ -1,9 +1,12 @@
-import express from "express";
-import * as controller from "../controller/auth.controller.js";
+import { Router } from "express";
+import auth from "./auth.route.js";
 
-const router = express.Router();
+const router = Router();
 
-router.post("/register", controller.register);
-router.post("/login", controller.login);
+router.get("/", (req, res) => {
+  res.json({ message: "Auth route working Good ✅" });
+});
+
+router.use("/", auth);
 
 export default router;

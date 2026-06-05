@@ -1,36 +1,122 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 
 const tenantSchema = new mongoose.Schema(
-	{
-		tenantId: {
-			type: String,
-			unique: true
-		},
-		shopName: {
-			type: String,
-			required: [true, 'shop name is required'],
-			trim: true
-		},
-		email: {
-			type: String,
-			required: [true, 'email is required'],
-			unique: true,
-			lowercase: true,
-			trim: true,
-			match: [/^\S+@\S+\.\S+$/, 'Invalid email format']
-		},
-		status: {
-			type: String,
-			enum: ['active', 'inactive', 'suspended'],
-			default: 'active'
-		},
-		plan: {
-			type: String,
-			enum: ['free', 'basic', 'pro'],
-			default: 'free'
-		}
-	},
-	{ timestamps: true, versionKey: false }
+  {
+    // identity
+    tenantId: {
+      type: String,
+      unique: true,
+      required: true,
+      default: uuidv4,
+      immutable: true,
+    },
+
+    fullName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    // business information
+    businessName: {
+      type: String,
+      trim: true,
+    },
+
+    businessEmail: {
+      type: String,
+      unique: true,
+      lowercase: true,
+      required: true,
+      trim: true,
+      match: [/^\S+@\S+\.\S+$/, "Invalid email format"],
+    },
+
+    businessPhone: {
+      type: String,
+      trim: true,
+    },
+
+    businessWebsite: {
+      type: String,
+      trim: true,
+    },
+
+    businessAddress: {
+      type: String,
+      trim: true,
+    },
+
+    contactPageEmail: {
+      type: String,
+      lowercase: true,
+      trim: true,
+    },
+
+    // central control
+    centralStatus: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    // branding
+    logo: String,
+    favicon: String,
+    invoiceLogo: String,
+
+    // social media
+    socialMediaLinks: [
+      {
+        platform: String,
+        url: String,
+      },
+    ],
+
+    // banking information
+    bankDetails: [
+      {
+        bankName: String,
+        accountName: String,
+        accountNumber: String,
+        branchName: String,
+        routingNumber: String,
+      },
+    ],
+
+    // website & invoice settings
+    invoiceFooterNotes: String,
+    websiteFooterNotes: String,
+
+    // seo settings
+    seoMetaTitle: String,
+    seoMetaDescription: String,
+    seoKeywords: [String],
+
+    // client configuration
+    clientType: [String],
+
+    // audit
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "auth",
+    },
+
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "auth",
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  },
 );
 
-export default mongoose.model('Tenant', tenantSchema);
+export default mongoose.model("Tenant", tenantSchema);
