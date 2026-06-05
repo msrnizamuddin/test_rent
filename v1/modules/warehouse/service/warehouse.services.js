@@ -16,3 +16,19 @@ export const createWarehouseService = async (payload) => {
 export const getAllWarehouseService = async () => {
   return Warehouse.find();
 };
+
+export const updateWarehouseService = async (id, payload) => {
+  const warehouse = await Warehouse.findByIdAndUpdate(
+    id,
+    { ...payload },
+    { new: true, runValidators: true },
+  );
+
+  if (!warehouse) {
+    const err = new Error('Warehouse not found');
+    err.status = 404;
+    throw err;
+  }
+
+  return warehouse;
+};

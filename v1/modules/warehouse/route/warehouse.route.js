@@ -8,6 +8,7 @@ import { validate } from "../../auth/middleware/validate.middleware.js";
 import {
   createWarehouseValidation,
 } from "../validation/warehouse.validation.js";
+import { updateWarehouseValidation } from "../validation/warehouse.validation.js";
 
 const router = express.Router();
 
@@ -29,6 +30,17 @@ router.post(
 router.get(
   "/",
   controller.getAllWarehouse,
+);
+
+router.get(
+  "/all",
+  controller.getAllWarehouse,
+);
+
+router.patch(
+  "/:id",
+  validate(updateWarehouseValidation),
+  controller.updateWarehouse,
 );
 
 export default router;

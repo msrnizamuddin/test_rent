@@ -1,6 +1,7 @@
 import {
   createWarehouseService,
   getAllWarehouseService,
+  updateWarehouseService,
 } from "../service/warehouse.services.js";
 
 export const createWarehouse = async (req, res) => {
@@ -36,6 +37,28 @@ export const getAllWarehouse = async (
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const updateWarehouse = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const warehouse = await updateWarehouseService(
+      id,
+      req.body,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Warehouse updated successfully",
+      data: warehouse,
+    });
+  } catch (error) {
+    res.status(error.status || 500).json({
       success: false,
       message: error.message,
     });
