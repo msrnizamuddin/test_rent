@@ -2,32 +2,35 @@ import mongoose from 'mongoose';
 
 const { Schema } = mongoose;
 
-const warehouseSchema = new Schema(
+const brandSchema = new Schema(
     {
         tenantId: {
-<<<<<<< HEAD
             type: String, // UUID
             required: true,
             index: true,
-=======
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Tenant",
-            required: true,
->>>>>>> cf94805cef18f136ac105c901ecd924668c43c91
         },
         centralStatus: {
             type: String,
             enum: ['active', 'inactive'],
             default: 'active',
         },
+        status: {
+            type: String,
+            enum: ['active', 'inactive'],
+            default: 'active',
+        },
         name: {
+            en: { type: String, trim: true },
+            ar: { type: String, trim: true },
+        },
+        slug: {
             type: String,
             required: true,
+            unique: true,
             trim: true,
         },
-        location: {
+        profileImage: {
             type: String,
-            trim: true,
         },
         createdBy: {
             type: Schema.Types.ObjectId,
@@ -43,5 +46,5 @@ const warehouseSchema = new Schema(
     }
 );
 
-const Warehouse = mongoose.model('Warehouse', warehouseSchema);
-export default Warehouse;
+const Brand = mongoose.model('Brand', brandSchema);
+export default Brand;
