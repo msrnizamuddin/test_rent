@@ -1,35 +1,32 @@
-import { uid } from "uid";
 import tenentModel from "../model/tenent.model.js";
+import { updateTenantSchema } from "../validation/tenentValidation.js";
 
-const createTenant = async (req, res) => {
+export const createTenant = async (req, res) => {
   try {
-    const { shopName, email, plan } = req.body;
+    const value = req.body;
 
-    // Generate a unique tenantId
-    const tenantId = `TEN-${uid(8)}`; // → "TEN-a1b2c3d4"
-
-    const tenant = await tenentModel.create({
-      tenantId,
-      shopName,
-      email,
-      plan: plan || "free",
+    const existing = await tenentModel.findOne({
+      businessEmail: value.businessEmail,
     });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: "This business email is already registered",
+      });
+    }
+
+    const tenant = await tenentModel.create(value);
 
     return res.status(201).json({
       success: true,
       message: "Tenant created successfully",
-      data: {
-        tenantId: tenant.tenantId, // → "TEN-a1b2c3d4"
-        shopName: tenant.shopName,
-        email: tenant.email,
-        status: tenant.status,
-        plan: tenant.plan,
-      },
+      data: tenant,
     });
   } catch (error) {
+    console.error("Error creating tenant:", error.message);
     return res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Server error while creating tenant",
     });
   }
 };
@@ -63,9 +60,28 @@ export const updateTenant = async (req, res) => {
     const { tenantId } = req.params;
     const updates = req.body;
 
-    const tenant = await tenentModel.findOneAndUpdate({ tenantId }, updates, {
-      new: true,
+    //  Validation check first
+    const { error, value } = updateTenantSchema.validate(updates, {
+      abortEarly: false,
     });
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: error.details.reduce((acc, err) => {
+          acc[err.context.key] = err.message.replace(/"/g, "");
+          return acc;
+        }, {}),
+      });
+    }
+
+    //  Validation pass — now DB update
+    const tenant = await tenentModel.findOneAndUpdate(
+      { tenantId },
+      value, // sanitised value from updateTenantSchema
+      { new: true },
+    );
 
     if (!tenant) {
       return res.status(404).json({
@@ -76,11 +92,11 @@ export const updateTenant = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "✅ Tenant updated successfully",
+      message: "Tenant updated successfully",
       data: tenant,
     });
   } catch (error) {
-    console.error("❌ Error updating tenant:", error.message);
+    console.error("Error updating tenant:", error.message);
     return res.status(500).json({
       success: false,
       message: "Server error while updating tenant",
