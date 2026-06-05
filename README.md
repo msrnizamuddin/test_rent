@@ -1,3 +1,44 @@
+## 🚀 API Endpoint: Create Tenant
+
+### URL
+`POST /api/v1/tenant/createTenant`
+
+### Description
+"This API is used to create a new tenant. A unique tenantId (TEN-xxxxxxx) is generated for each tenant."
+
+### Request Body
+```json
+{
+  "shopName": "My Shop",
+  "email": "shop@example.com",
+  "plan": "basic"
+}
+
+### Get All Tenants URL
+`GET /api/v1/tenant/getTenant`
+
+No request body needed.
+Success Response (200):
+json{
+  "success": true,
+  "data": [ ...tenants ]
+}
+
+### Update Tenant URL
+`PATCH  /api/v1/tenant/updateTenant/:tenantId`
+
+{
+  "shopName": "New Shop Name",
+  "status": "inactive",
+  "plan": "pro"
+}
+* Success Response (200):
+{
+  "success": true,
+  "message": "✅ Tenant updated successfully",
+  "data": { ...updatedTenant }
+}
+
 # SBR Central Server — Product Module API
 
 This module handles **Product** management for the SBR multi-tenant system. All endpoints are scoped to the authenticated tenant via `tenantId`.
@@ -488,3 +529,39 @@ Timestamps: `createdAt`, `updatedAt`
 - Do not commit `.env`; store `JWT_SECRET` securely (Vault/Secrets Manager) in production.
 - If you need tenants as first-class resources, add a `tenant` model and create a tenant record during registration instead of only generating an ObjectId.
 
+## Catergories
+
+| Endpoint | Description | Method |
+| :--- | :--- | :--- |
+| `/api/v1/category/createCategory` | Create Category table | POST |
+| `/api/v1/category/allCategories` | Get all Category  | GET |
+
+## Sub-Category
+
+| Endpoint | Description | METHOD |
+| :--- | :--- | :--- |
+| `/api/v1/category/createSubCategory` | Create Sub-Category table | POST |
+| `/api/v1/category/allSubCategories` | GET ALL SubCategory | GET |
+
+
+## Child-Category
+
+| Endpoint | Description | Data Source |
+| :--- | :--- | :--- |
+| `/api/v1/category/createChildCategory` | Create Child-Category table | POST |
+| `/api/v1/category/allChildCategories` | Get all Child-Category | GET |
+
+
+```json
+{
+	"tenantId": "my-company-uuid-001",
+  "centralStatus" : "active",
+  "type" : "Parent",
+  "status" : "active",
+  "name" : "bag",
+  "slug" : "nikec",
+  "profileImage": "https://example.com/images/nike.png",
+  "createdBy": "665f1a2c9b7d4f1a12345671",
+  "updatedBy": "665f1a2c9b7d4f1a12345672"
+}
+```
