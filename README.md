@@ -4,14 +4,25 @@
 `POST /api/v1/tenant/createTenant`
 
 ### Description
-"This API is used to create a new tenant. A unique tenantId (TEN-xxxxxxx) is generated for each tenant."
+"This API is used to create a new tenant. A unique tenantId is generated for each tenant."
 
 ### Request Body
 ```json
 {
-  "shopName": "My Shop",
-  "email": "shop@example.com",
-  "plan": "basic"
+  "fullName": "John Doe",
+  "businessEmail": "john@example.com",
+  "businessName": "Acme Ltd",
+  "businessPhone": "+8801711000000",
+  "businessAddress": "Dhaka, Bangladesh",
+  "centralStatus": "active"
+}
+
+--Success Response 201 Created:
+
+json{
+  "success": true,
+  "message": "Tenant created successfully",
+  "data": { ...tenant }
 }
 
 ### Get All Tenants URL
@@ -28,9 +39,11 @@ json{
 `PATCH  /api/v1/tenant/updateTenant/:tenantId`
 
 {
-  "shopName": "New Shop Name",
-  "status": "inactive",
-  "plan": "pro"
+ {
+  "fullName": "Jane Doe",
+  "businessPhone": "+8801900000000",
+  "centralStatus": "inactive"
+}
 }
 * Success Response (200):
 {

@@ -28,6 +28,7 @@ const tenantSchema = new mongoose.Schema(
       type: String,
       unique: true,
       lowercase: true,
+      required: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, "Invalid email format"],
     },
