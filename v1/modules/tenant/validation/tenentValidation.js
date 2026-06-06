@@ -198,4 +198,27 @@ export const validateTenant = (req, res, next) => {
   next();
 };
 
+
+export const validateUpdateTenant = (req, res, next) => {
+  const { error, value } = updateTenantSchema.validate(req.body, {
+    abortEarly: false,
+  });
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed",
+      errors: error.details.reduce((acc, err) => {
+        acc[err.context.key] = err.message.replace(/"/g, "");
+        return acc;
+      }, {}),
+    });
+  }
+
+  req.body = value; // validated value
+  next();
+};
+
+
+
 export default tenantValidationSchema;
