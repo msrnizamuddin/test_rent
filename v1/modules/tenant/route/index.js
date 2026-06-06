@@ -1,9 +1,12 @@
 import { Router } from "express";
-import { getAllTenant, updateTenant } from "../controller/tenant.controller.js";
-import { validateUpdateTenant } from "../validation/tenentValidation.js";
+import tenant from "./tenant.route.js";
+
 const router = Router();
 
-router.get("/getTenant", getAllTenant);
-router.patch("/updateTenant/:tenantId", validateUpdateTenant, updateTenant);
+router.get("/", (req, res) => {
+  res.json({ message: "tenant route working Good ✅" });
+});
+
+router.use("/", tenant);
 
 export default router;
