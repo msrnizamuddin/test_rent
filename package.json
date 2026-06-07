@@ -8,7 +8,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start" : "node server.js",
+    "start": "nodemon server.js",
     "build": "node server.js",
     "start-dev": "nodemon server.js"
   },
@@ -22,6 +22,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.2",
     "morgan": "^1.10.1",
+    "uid": "^2.0.2",
+    "uuid": "^14.0.0",
     "validator": "^13.15.35"
   },
   "devDependencies": {

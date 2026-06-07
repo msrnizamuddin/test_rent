@@ -45,7 +45,9 @@ Thumbs.db
 
 # React build
 /build
-
+/tools
 # Temporary files
 *.tmp
 *.temp
+patchTest.txt
+sizes/

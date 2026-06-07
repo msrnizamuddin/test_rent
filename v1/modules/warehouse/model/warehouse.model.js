@@ -1,13 +1,16 @@
 import mongoose from 'mongoose';
-
+import { v4 as uuidv4 } from "uuid";
 const { Schema } = mongoose;
 
 const warehouseSchema = new Schema(
     {
+        
         tenantId: {
-            type: String, // UUID
+            type: String,
+            unique: true,
             required: true,
-            index: true,
+            default: uuidv4,
+            immutable: true,
         },
         centralStatus: {
             type: String,
@@ -30,11 +33,9 @@ const warehouseSchema = new Schema(
         },
         createdBy: {
             type: Schema.Types.ObjectId,
-            ref: 'User',
         },
         updatedBy: {
             type: Schema.Types.ObjectId,
-            ref: 'User',
         },
     },
     {

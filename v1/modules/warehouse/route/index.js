@@ -1,8 +1,13 @@
-import express from "express";
-const router = express.Router();
+import { Router } from "express";
+import warehouseRoute from "./warehouse.route.js";
 
-router.get("/ping", (req, res) => {
-    res.status(200).json({ message: "Module is alive!" });
+const router = Router();
+
+router.get("/", (req, res) => {
+  res.json({ message: "warehouse route working Good ✅" });
 });
+
+
+router.use("/", warehouseRoute);
 
 export default router;

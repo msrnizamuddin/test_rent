@@ -2,24 +2,25 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 const authSchema = new mongoose.Schema(
-	{
-		fullName: {
-			type: String,
-			required: true,
-			trim: true
-		},
-		tenantId: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'tenant',
-			required: true
-		},
+  {
+    // identity
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Tenant",
+    },
 
-		email: {
-			type: String,
-			required: true,
-			lowercase: true,
-			trim: true
-		},
+    userType: {
+      type: String,
+      enum: ["superadmin", "tenant"],
+      default: "tenant",
+    },
+
+    // login credentials
+    emailOrPhone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
 		password: {
 			type: String,
@@ -28,70 +29,62 @@ const authSchema = new mongoose.Schema(
 			select: false
 		},
 
-		role: {
-			type: String,
-			enum: ['Super Admin', 'Tenant'],
-			default: 'Tenant'
-		},
+    // central control
+    centralStatus: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
 
-		isActive: {
-			type: Boolean,
-			default: true
-		},
-		centralStatus: {
-			type: String,
-			enum: ['active', 'inactive'],
-			default: 'active'
-		},
-		domain: {
-			type: String,
-			trim: true
-		},
-		clientLoginToken: {
-			type: String
-		},
-		tokenExpiration: {
-			type: Date
-		},
-		supportedLanguages: {
-			type: [String],
-			default: []
-		},
-		supportedCurrency: {
-			type: [String],
-			default: []
-		},
-		createdBy: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'auth'
-		},
-		updatedBy: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'auth'
-		},
-		verificationToken: {
-			type: String,
-			select: false
-		}
-	},
-	{
-		timestamps: true
-	}
+    // other information
+    supportedLanguages: {
+      type: [String],
+      default: [],
+    },
+
+    supportedCurrency: {
+      type: [String],
+      default: [],
+    },
+
+    // audit
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Auth",
+    },
+
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Auth",
+    },
+
+    // security
+    verificationToken: {
+      type: String,
+      select: false,
+    },
+
+    clientLoginToken: {
+      type: String,
+      select: false,
+    },
+
+    tokenExpiration: {
+      type: Date,
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  },
 );
 
+// Same tenant-এর মধ্যে email/phone unique
+authSchema.index({ tenantId: 1, emailOrPhone: 1 }, { unique: true });
 
-authSchema.index({ tenantId: 1, email: 1 }, { unique: true });
-
-authSchema.pre("save", async function () {
-  if (!this.isModified("password")) {
-    return;
-  }
-
-  this.password = await bcrypt.hash(this.password, 10);
-});
-
+// Password verification helper
 authSchema.methods.comparePassword = async function (plainPassword) {
-  return await bcrypt.compare(plainPassword, this.password);
+  return bcrypt.compare(plainPassword, this.password);
 };
 
-export default mongoose.model("auth", authSchema);
+export default mongoose.model("Auth", authSchema);
