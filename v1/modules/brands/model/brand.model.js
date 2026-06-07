@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
 
-const { Schema, model } = mongoose;
+const { Schema, model, ObjectId } = mongoose;
 
 const brandSchema = new Schema(
 	{
 		tenantId: {
 			type: String,
-			required: true,
-			unique: true
+			required: true
+			// unique: true
 		},
 
 		centralStatus: {
