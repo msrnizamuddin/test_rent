@@ -23,10 +23,7 @@ export const createWarehouse = async (req, res) => {
   }
 };
 
-export const getAllWarehouse = async (
-  req,
-  res,
-) => {
+export const getAllWarehouse = async (req, res) => {
   try {
     const warehouses =
       await getAllWarehouseService();

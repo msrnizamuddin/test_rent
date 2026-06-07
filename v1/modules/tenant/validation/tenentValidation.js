@@ -162,7 +162,7 @@ const tenantValidationSchema = Joi.object({
   createdBy: Joi.string().optional(), // ObjectId as string
 
   updatedBy: Joi.string().optional(), // ObjectId as string
-}).options({ abortEarly: false }); // show ALL errors at once
+});
 
 // Update schema — all field optional (partial update)
 export const updateTenantSchema = tenantValidationSchema.fork(
@@ -178,24 +178,5 @@ export const updateTenantSchema = tenantValidationSchema.fork(
   ],
   (field) => field.optional(),
 );
-
-// ─────────────────────────────────────────────
-// Reusable validate middleware
-// ─────────────────────────────────────────────
-export const validateTenant = (req, res, next) => {
-  const { error, value } = tenantValidationSchema.validate(req.body);
-  if (error) {
-    return res.status(400).json({
-      success: false,
-      message: "Validation failed",
-      errors: error.details.reduce((acc, err) => {
-        acc[err.context.key] = err.message.replace(/"/g, "");
-        return acc;
-      }, {}),
-    });
-  }
-  req.body = value; // use sanitised & defaulted value
-  next();
-};
 
 export default tenantValidationSchema;

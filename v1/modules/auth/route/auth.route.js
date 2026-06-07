@@ -3,7 +3,7 @@ import * as controller from "../controller/auth.controller.js";
 
 import { validate } from "../middleware/validate.middleware.js";
 
-import { signupValidation, loginValidation,} from "../validation/auth.validation.js";
+import { signupValidation, loginValidation, updateUserValidation } from "../validation/auth.validation.js";
 
 const router = express.Router();
 
@@ -26,6 +26,7 @@ router.get(
 
 router.patch(
   "/user/:id",
+  validate(updateUserValidation),
   controller.updateUser,
 );
 

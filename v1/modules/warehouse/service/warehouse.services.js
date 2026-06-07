@@ -7,6 +7,7 @@ export const createWarehouseService = async (payload) => {
         name: payload.name,
         location: payload.location,
         centralStatus: payload.centralStatus,
+        status: payload.status,
     },
   );
 
