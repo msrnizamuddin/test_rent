@@ -22,12 +22,12 @@ const authSchema = new mongoose.Schema(
       trim: true,
     },
 
-    password: {
-      type: String,
-      required: true,
-      minlength: 8,
-      select: false,
-    },
+		password: {
+			type: String,
+			required: true,
+			minlength: 8,
+			select: false
+		},
 
     // central control
     centralStatus: {
