@@ -19,7 +19,9 @@ export const createWarehouseValidation = Joi.object({
   name: Joi.string()
     .trim()
     .required(),
-
+  status: Joi.string()
+    .valid("active", "inactive")
+    .default("active"),
   location: Joi.string()
     .trim()
     .allow("")
@@ -40,6 +42,9 @@ export const updateWarehouseValidation = Joi.object({
   centralStatus: Joi.string()
     .valid("active", "inactive"),
 
+  status: Joi.string()
+    .valid("active", "inactive"),
+  
   name: Joi.string().trim(),
 
   location: Joi.string().trim(),

@@ -7,7 +7,7 @@ const tenantSchema = new mongoose.Schema(
     tenantId: {
       type: String,
       unique: true,
-      required: true,
+      required: true, 
       default: uuidv4,
       immutable: true,
     },

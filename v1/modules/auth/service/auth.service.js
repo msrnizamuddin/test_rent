@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 import Auth from "../model/auth.model.js";
-import Tenant from "../../tenant/model/tenant.model.js";
+import Tenant from "../../tenant/model/tenent.model.js";
 
 export const registerService = async (payload) => {
   const session = await mongoose.startSession();

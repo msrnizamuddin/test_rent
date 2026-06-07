@@ -420,6 +420,20 @@ This module handles user authentication (registration and login) for the SBR mul
 | `/login`       | POST   | Authenticate user (returns JWT)     |
 
 ---
+## Create Brands
+
+POST http://localhost:5000/api/v1/brands/createBrand
+{
+  "tenantId": "TENANT001",
+  "centralStatus": "active",
+  "name": "Nikef",
+  "slug": "nikec",
+  "profileImage": "https://example.com/images/nike.png",
+  "status": "active",
+  "createdBy": "665f1a2c9b7d4f1a12345671",
+  "updatedBy": "665f1a2c9b7d4f1a12345672"
+}
+
 
 ## Warehouse Module
 
