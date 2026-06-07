@@ -1,16 +1,13 @@
 import Tenant from "../model/tenent.model.js";
-
 export const getAllTenant = async (req, res) => {
   try {
     const tenant = await Tenant.find();
-
     if (!tenant) {
       return res.status(404).json({
         success: false,
         message: "Tenant not found",
       });
     }
-
     return res.status(200).json({
       success: true,
       data: tenant,
@@ -23,26 +20,22 @@ export const getAllTenant = async (req, res) => {
     });
   }
 };
-
 export const updateTenant = async (req, res) => {
   try {
     const { tenantId } = req.params;
     const updates = req.body;
-
     //  Validation pass — now DB update
     const tenant = await Tenant.findOneAndUpdate(
       { tenantId },
       updates, // sanitised value from updateTenantSchema
       { new: true },
     );
-
     if (!tenant) {
       return res.status(404).json({
         success: false,
         message: "Tenant not found",
       });
     }
-
     return res.status(200).json({
       success: true,
       message: "Tenant updated successfully",

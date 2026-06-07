@@ -4,7 +4,6 @@ export const validate = (schema) => {
       abortEarly: false,
       stripUnknown: true, // remove unknown fields
     });
-
     if (error) {
     return res.status(400).json({
       success: false,
@@ -15,7 +14,6 @@ export const validate = (schema) => {
       }, {}),
     });
   }
-
     req.body = value;
     next();
   };

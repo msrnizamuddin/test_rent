@@ -11,19 +11,16 @@ const tenantSchema = new mongoose.Schema(
       default: uuidv4,
       immutable: true,
     },
-
     fullName: {
       type: String,
       required: true,
       trim: true,
     },
-
     // business information
     businessName: {
       type: String,
       trim: true,
     },
-
     businessEmail: {
       type: String,
       unique: true,
@@ -32,45 +29,37 @@ const tenantSchema = new mongoose.Schema(
       trim: true,
       match: [/^\S+@\S+\.\S+$/, "Invalid email format"],
     },
-
     businessPhone: {
       type: String,
       trim: true,
     },
-
     businessWebsite: {
       type: String,
       trim: true,
     },
-
     businessAddress: {
       type: String,
       trim: true,
     },
-
     contactPageEmail: {
       type: String,
       lowercase: true,
       trim: true,
     },
-
     // central control
     centralStatus: {
       type: String,
       enum: ["active", "inactive"],
       default: "active",
     },
-
     isVerified: {
       type: Boolean,
       default: false,
     },
-
     // branding
     logo: String,
     favicon: String,
     invoiceLogo: String,
-
     // social media
     socialMediaLinks: [
       {
@@ -78,7 +67,6 @@ const tenantSchema = new mongoose.Schema(
         url: String,
       },
     ],
-
     // banking information
     bankDetails: [
       {
@@ -89,25 +77,20 @@ const tenantSchema = new mongoose.Schema(
         routingNumber: String,
       },
     ],
-
     // website & invoice settings
     invoiceFooterNotes: String,
     websiteFooterNotes: String,
-
     // seo settings
     seoMetaTitle: String,
     seoMetaDescription: String,
     seoKeywords: [String],
-
     // client configuration
     clientType: [String],
-
     // audit
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "auth",
     },
-
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "auth",
@@ -118,5 +101,4 @@ const tenantSchema = new mongoose.Schema(
     versionKey: false,
   },
 );
-
 export default mongoose.model("Tenant", tenantSchema);

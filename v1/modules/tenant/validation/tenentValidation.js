@@ -1,9 +1,7 @@
 import Joi from "joi";
-
 // ─────────────────────────────────────────────
 // Tenant Joi Validation Schema
 // ─────────────────────────────────────────────
-
 const tenantValidationSchema = Joi.object({
   // ── Identity ──────────────────────────────
   tenantId: Joi.string()
@@ -12,18 +10,15 @@ const tenantValidationSchema = Joi.object({
     .messages({
       "string.guid": "tenantId must be a valid UUID v4",
     }),
-
   fullName: Joi.string().min(2).max(100).required().messages({
     "string.min": "fullName must be at least 2 characters",
     "string.max": "fullName must not exceed 100 characters",
     "any.required": "fullName is required",
   }),
-
   // ── Business Information ───────────────────
   businessName: Joi.string().max(150).optional().messages({
     "string.max": "businessName must not exceed 150 characters",
   }),
-
   businessEmail: Joi.string()
     .email({ tlds: { allow: false } })
     .lowercase()
@@ -32,25 +27,21 @@ const tenantValidationSchema = Joi.object({
       "string.email": "businessEmail must be a valid email address",
       "any.required": "businessEmail is required",
     }),
-
   businessPhone: Joi.string()
     .pattern(/^[+\d\s\-().]{7,20}$/)
     .optional()
     .messages({
       "string.pattern.base": "businessPhone format is invalid",
     }),
-
   businessWebsite: Joi.string()
     .uri({ scheme: ["http", "https"] })
     .optional()
     .messages({
       "string.uri": "businessWebsite must be a valid URL (http/https)",
     }),
-
   businessAddress: Joi.string().max(300).optional().messages({
     "string.max": "businessAddress must not exceed 300 characters",
   }),
-
   contactPageEmail: Joi.string()
     .email({ tlds: { allow: false } })
     .lowercase()
@@ -58,7 +49,6 @@ const tenantValidationSchema = Joi.object({
     .messages({
       "string.email": "contactPageEmail must be a valid email address",
     }),
-
   // ── Central Control ────────────────────────
   centralStatus: Joi.string()
     .valid("active", "inactive")
@@ -67,9 +57,7 @@ const tenantValidationSchema = Joi.object({
     .messages({
       "any.only": "centralStatus must be either 'active' or 'inactive'",
     }),
-
   isVerified: Joi.boolean().default(false).optional(),
-
   // ── Branding ──────────────────────────
   logo: Joi.string()
     .uri({ scheme: ["http", "https"] })
@@ -77,21 +65,18 @@ const tenantValidationSchema = Joi.object({
     .messages({
       "string.uri": "logo must be a valid URL",
     }),
-
   favicon: Joi.string()
     .uri({ scheme: ["http", "https"] })
     .optional()
     .messages({
       "string.uri": "favicon must be a valid URL",
     }),
-
   invoiceLogo: Joi.string()
     .uri({ scheme: ["http", "https"] })
     .optional()
     .messages({
       "string.uri": "invoiceLogo must be a valid URL",
     }),
-
   // ── Social Media ───────────────────────
   socialMediaLinks: Joi.array()
     .items(
@@ -109,7 +94,6 @@ const tenantValidationSchema = Joi.object({
       }),
     )
     .optional(),
-
   // ── Banking Information ────────────────────
   bankDetails: Joi.array()
     .items(
@@ -132,38 +116,29 @@ const tenantValidationSchema = Joi.object({
       }),
     )
     .optional(),
-
   // ── Website & Invoice Settings ────────────
   invoiceFooterNotes: Joi.string().max(500).optional().messages({
     "string.max": "invoiceFooterNotes must not exceed 500 characters",
   }),
-
   websiteFooterNotes: Joi.string().max(500).optional().messages({
     "string.max": "websiteFooterNotes must not exceed 500 characters",
   }),
-
   // ── SEO Settings ──────────────────────────
   seoMetaTitle: Joi.string().max(70).optional().messages({
     "string.max": "seoMetaTitle must not exceed 70 characters",
   }),
-
   seoMetaDescription: Joi.string().max(160).optional().messages({
     "string.max": "seoMetaDescription must not exceed 160 characters",
   }),
-
   seoKeywords: Joi.array().items(Joi.string().max(50)).optional().messages({
     "string.max": "Each seoKeyword must not exceed 50 characters",
   }),
-
   // ── Client Configuration ──────────────────
   clientType: Joi.array().items(Joi.string().max(50)).optional(),
-
   // ── Audit (usually set by server, not user) ─
   createdBy: Joi.string().optional(), // ObjectId as string
-
   updatedBy: Joi.string().optional(), // ObjectId as string
 });
-
 // Update schema — all field optional (partial update)
 export const updateTenantSchema = tenantValidationSchema.fork(
   [
@@ -178,5 +153,4 @@ export const updateTenantSchema = tenantValidationSchema.fork(
   ],
   (field) => field.optional(),
 );
-
 export default tenantValidationSchema;

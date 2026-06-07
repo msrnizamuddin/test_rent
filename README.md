@@ -1,29 +1,8 @@
 ## 🚀 API Endpoint: Create Tenant
 
-### URL
-`POST /api/v1/tenant/createTenant`
-
 ### Description
 "This API is used to create a new tenant. A unique tenantId is generated for each tenant."
 
-### Request Body
-```json
-{
-  "fullName": "John Doe",
-  "businessEmail": "john@example.com",
-  "businessName": "Acme Ltd",
-  "businessPhone": "+8801711000000",
-  "businessAddress": "Dhaka, Bangladesh",
-  "centralStatus": "active"
-}
-
---Success Response 201 Created:
-
-json{
-  "success": true,
-  "message": "Tenant created successfully",
-  "data": { ...tenant }
-}
 
 ### Get All Tenants URL
 `GET /api/v1/tenant/getTenant`
