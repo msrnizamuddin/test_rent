@@ -1,4 +1,3 @@
-import Tenant from "../model/tenent.model.js";
 import {
   getAllTenantService,
   updateTenantService,

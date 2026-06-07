@@ -1,5 +1,4 @@
-import Tenant from "../model/tenent.model.js";
-
+import Tenant from "../model/tenant.model.js";
 
 export const getAllTenantService = async () => {
   const tenant = await Tenant.find();
@@ -7,13 +6,10 @@ export const getAllTenantService = async () => {
 };
 
 export const updateTenantService = async (tenantId, updates) => {
-
-  const tenant = await Tenant.findOneAndUpdate(
-    { tenantId },
-    updates,
-    { new: true, runValidators: true }, 
-  );
-
+  const tenant = await Tenant.findOneAndUpdate({ tenantId }, updates, {
+    new: true,
+    runValidators: true,
+  });
   if (!tenant) {
     return { status: 404, success: false, message: "Tenant not found" };
   }
