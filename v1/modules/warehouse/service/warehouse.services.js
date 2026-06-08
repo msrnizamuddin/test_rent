@@ -33,3 +33,6 @@ export const updateWarehouseService = async (id, payload) => {
 
   return warehouse;
 };
+export const getWarehouseByIdService = async (id) => {
+  return Warehouse.findById(id);
+};

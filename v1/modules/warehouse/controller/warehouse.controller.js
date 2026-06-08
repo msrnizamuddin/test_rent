@@ -1,6 +1,7 @@
 import {
   createWarehouseService,
   getAllWarehouseService,
+  getWarehouseByIdService,
   updateWarehouseService,
 } from "../service/warehouse.services.js";
 
@@ -31,6 +32,35 @@ export const getAllWarehouse = async (req, res) => {
     res.status(200).json({
       success: true,
       data: warehouses,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getWarehouseById = async (
+  req,
+  res,
+) => {
+  try {
+    const { id } = req.params;
+
+    const warehouse =
+      await getWarehouseByIdService(id);
+
+    if (!warehouse) {
+      return res.status(404).json({
+        success: false,
+        message: "Warehouse not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: warehouse,
     });
   } catch (error) {
     res.status(500).json({

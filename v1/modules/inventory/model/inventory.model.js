@@ -2,11 +2,7 @@ import mongoose from 'mongoose';
 
 const { Schema } = mongoose;
 
-<<<<<<< Updated upstream
-=======
-// sub-schema for sizes
 
->>>>>>> Stashed changes
 
 // main inventory schema
 const inventorySchema = new Schema(
@@ -16,17 +12,11 @@ const inventorySchema = new Schema(
             ref: 'Warehouse',
             required: true,
         },
-<<<<<<< Updated upstream
         sizeId: {
             type: Schema.Types.ObjectId,
             ref: 'Size',
             required: true,
         },
-=======
-        sizes: {
-            type : Schema.Types.ObjectId
-        }, // embedded sizes array
->>>>>>> Stashed changes
         color: {
             type: String,
             trim: true,

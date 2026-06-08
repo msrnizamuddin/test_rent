@@ -17,13 +17,13 @@ import { validate } from "../../auth/middleware/validate.middleware.js";
 const customerRouter = express.Router();
 
 customerRouter.post(
-  "/",
+  "/create",
   validate(createCustomerValidation),
   createCustomerController
 );
 
 customerRouter.get(
-  "/",
+  "/all",
   getAllCustomersController
 );
 
