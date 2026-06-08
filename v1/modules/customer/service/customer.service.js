@@ -11,11 +11,17 @@ export const createCustomerService = async (payload) => {
     throw new Error("Customer already exists");
   }
 
-  const passwordHash = await bcrypt.hash(payload.password, 10);
+  const passwordHash = await bcrypt.hash(
+    payload.password,
+    10
+  );
+
+  delete payload.password;
 
   const customer = await Customer.create({
     ...payload,
     passwordHash,
+    fullName: `${payload.firstName} ${payload.lastName}`.trim(),
   });
 
   return customer;
@@ -65,7 +71,10 @@ export const getCustomerByIdService = async (id) => {
   return customer;
 };
 
-export const updateCustomerService = async (id, payload) => {
+export const updateCustomerService = async (
+  id,
+  payload
+) => {
   if (payload.password) {
     payload.passwordHash = await bcrypt.hash(
       payload.password,
@@ -73,6 +82,28 @@ export const updateCustomerService = async (id, payload) => {
     );
 
     delete payload.password;
+  }
+
+  if (
+    payload.firstName !== undefined ||
+    payload.lastName !== undefined
+  ) {
+    const existingCustomer = await Customer.findOne({
+      _id: id,
+      status: "active",
+    });
+
+    if (!existingCustomer) {
+      throw new Error("Customer not found");
+    }
+
+    payload.fullName = `${
+      payload.firstName ??
+      existingCustomer.firstName
+    } ${
+      payload.lastName ??
+      existingCustomer.lastName
+    }`.trim();
   }
 
   const customer = await Customer.findOneAndUpdate(
@@ -86,6 +117,31 @@ export const updateCustomerService = async (id, payload) => {
       runValidators: true,
     }
   ).select("-passwordHash -__v");
+
+  if (!customer) {
+    throw new Error("Customer not found");
+  }
+
+  return customer;
+};
+
+export const deleteCustomerService = async (
+  id,
+  updatedBy
+) => {
+  const customer = await Customer.findOneAndUpdate(
+    {
+      _id: id,
+      status: "active",
+    },
+    {
+      status: "inactive",
+      updatedBy,
+    },
+    {
+      new: true,
+    }
+  );
 
   if (!customer) {
     throw new Error("Customer not found");

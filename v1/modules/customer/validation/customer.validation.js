@@ -1,5 +1,17 @@
 import Joi from "joi";
+const addressValidation = Joi.object({
+  addressLine1: Joi.string().trim(),
 
+  addressLine2: Joi.string().trim().allow("", null),
+
+  city: Joi.string().trim(),
+
+  state: Joi.string().trim(),
+
+  postalCode: Joi.string().trim(),
+
+  country: Joi.string().trim(),
+});
 export const createCustomerValidation = Joi.object({
   firstName: Joi.string().trim().required(),
 
@@ -13,19 +25,23 @@ export const createCustomerValidation = Joi.object({
 
   profilePicture: Joi.string().uri().allow("", null),
 
-  billingAddress: Joi.string().trim().allow("", null),
+  billingAddress: addressValidation.allow(null),
 
-  shippingAddress: Joi.string().trim().allow("", null),
+  shippingAddress: addressValidation.allow(null),
 
   isVerified: Joi.boolean(),
 
   isCentral: Joi.boolean(),
 
-  centralStatus: Joi.string()
-    .valid("active", "inactive"),
+  centralStatus: Joi.string().valid(
+    "active",
+    "inactive"
+  ),
 
-  status: Joi.string()
-    .valid("active", "inactive"),
+  status: Joi.string().valid(
+    "active",
+    "inactive"
+  ),
 });
 
 export const updateCustomerValidation = Joi.object({
@@ -39,18 +55,22 @@ export const updateCustomerValidation = Joi.object({
 
   profilePicture: Joi.string().uri().allow("", null),
 
-  billingAddress: Joi.string().trim().allow("", null),
+  billingAddress: addressValidation.allow(null),
 
-  shippingAddress: Joi.string().trim().allow("", null),
+  shippingAddress: addressValidation.allow(null),
 
   isVerified: Joi.boolean(),
 
   isCentral: Joi.boolean(),
 
-  centralStatus: Joi.string()
-    .valid("active", "inactive"),
+  centralStatus: Joi.string().valid(
+    "active",
+    "inactive"
+  ),
 
-  status: Joi.string()
-    .valid("active", "inactive"),
+  status: Joi.string().valid(
+    "active",
+    "inactive"
+  ),
 }).min(1);
 
