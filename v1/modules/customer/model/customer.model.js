@@ -1,5 +1,41 @@
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
+
+const addressSchema = new mongoose.Schema(
+  {
+    addressLine1: {
+      type: String,
+      trim: true,
+    },
+
+    addressLine2: {
+      type: String,
+      trim: true,
+    },
+
+    city: {
+      type: String,
+      trim: true,
+    },
+
+    state: {
+      type: String,
+      trim: true,
+    },
+
+    postalCode: {
+      type: String,
+      trim: true,
+    },
+
+    country: {
+      type: String,
+      trim: true,
+    },
+  },
+  { _id: false }
+);
+
 const customerSchema = new mongoose.Schema(
   {
     firstName: {
@@ -43,15 +79,9 @@ const customerSchema = new mongoose.Schema(
       default: null,
     },
 
-    billingAddress: {
-      type: String,
-      trim: true,
-    },
+    billingAddress: addressSchema,
 
-    shippingAddress: {
-      type: String,
-      trim: true,
-    },
+    shippingAddress: addressSchema,
 
     isVerified: {
       type: Boolean,
