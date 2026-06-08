@@ -2,21 +2,7 @@ import mongoose from 'mongoose';
 
 const { Schema } = mongoose;
 
-// sub-schema for sizes
-const sizeSchema = new Schema(
-    {
-        tenantId: { type: String },
-        centralStatus: { type: String, enum: ['active', 'inactive'], default: 'active' },
-        status: { type: String, enum: ['active', 'inactive'], default: 'active' },
-        name: {
-            en: { type: String, trim: true },
-            ar: { type: String, trim: true },
-        },
-        createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
-        updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
-    },
-    { _id: true }
-);
+
 
 // main inventory schema
 const inventorySchema = new Schema(
@@ -26,7 +12,11 @@ const inventorySchema = new Schema(
             ref: 'Warehouse',
             required: true,
         },
-        sizes: [sizeSchema], // embedded sizes array
+        sizeId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Size',
+            required: true,
+        },
         color: {
             type: String,
             trim: true,
@@ -37,7 +27,7 @@ const inventorySchema = new Schema(
         sku: {
             type: String,
             trim: true,
-        },
+        },  
         productPurchasePrice: {
             type: Number,
             min: 0,
@@ -53,11 +43,11 @@ const inventorySchema = new Schema(
         },
         createdBy: {
             type: Schema.Types.ObjectId,
-            ref: 'User',
+            
         },
         updatedBy: {
             type: Schema.Types.ObjectId,
-            ref: 'User',
+            
         },
     },
     {
