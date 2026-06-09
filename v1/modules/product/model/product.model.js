@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import "../../brand/model/brand.model.js";
+import "../../brands/model/brand.model.js";
 import "../../category/model/category.model.js";
 
 const { Schema } = mongoose;
