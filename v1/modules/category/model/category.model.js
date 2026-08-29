@@ -1,37 +1,44 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const { Schema } = mongoose;
+const localizedStringField = {
+  type: Map,
+  of: String,
+  default: {},
+};
 
 const categorySchema = new Schema(
   {
     tenantId: {
-      type: String, // UUID
-      required: true,
-      index: true,
+      type: Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: [true, "Tenant is required"],
     },
-    type : {
-      type : String,
-      required : true,
-      enum : "Parent" 
+    type: {
+      type: String,
+      required: true,
+      enum: "Parent",
     },
     centralStatus: {
       type: String,
-      enum: ['active', 'inactive'],
-      default: 'active',
+      enum: ["active", "inactive"],
+      default: "active",
     },
     status: {
       type: String,
-      enum: ['active', 'inactive'],
-      default: 'active',
+      enum: ["active", "inactive"],
+      default: "active",
     },
     name: {
-      en: { type: String, trim: true },
-      ar: { type: String, trim: true },
+      ...localizedStringField,
+      required: [true, "Name is required"],
     },
     slug: {
       type: String,
-      required: true,
+      required: [true, "Slug is required"],
+      unique: [true, "Slug must be unique"],
       trim: true,
+      lowercase: true,
     },
     profileImage: {
       type: String,
@@ -41,17 +48,23 @@ const categorySchema = new Schema(
     },
     createdBy: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "Tenant",
     },
     updatedBy: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "Tenant",
     },
   },
   {
     timestamps: true,
-  }
+    versionKey: false,
+  },
 );
 
-const Category = mongoose.model('Category', categorySchema);
+// ==================== INDEXES ====================
+categorySchema.index({ tenantId: 1, status: 1 }); // most common filter combination
+categorySchema.index({ createdAt: -1 }); // default sort
+
+const Category =
+  mongoose.models.Category || mongoose.model("Category", categorySchema);
 export default Category;

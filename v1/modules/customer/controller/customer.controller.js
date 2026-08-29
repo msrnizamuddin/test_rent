@@ -1,91 +1,113 @@
 import {
   createCustomerService,
+  loginCustomerService,
   getAllCustomersService,
   getCustomerByIdService,
   updateCustomerService,
+  addCustomerAddressService,
+  updateCustomerAddressService,
+  deleteCustomerAddressService,
 } from "../service/customer.service.js";
-
-export const createCustomerController = async (req, res) => {
+import { logModule } from "../../../utils/moduleLogger.js";
+logModule(import.meta.url);
+export const createCustomerController = async (req, res, next) => {
   try {
-    const customer = await createCustomerService(
-      req.body
-    );
-
-    res.status(201).json({
+    const customer = await createCustomerService(req.body);
+    return res.status(201).json({
       success: true,
       message: "Customer created successfully",
       data: customer,
     });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
-
-export const getAllCustomersController = async (req, res) => {
+export const loginCustomerController = async (req, res, next) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
-
-    const result =
-      await getAllCustomersService({
-        page,
-        limit,
-      });
-
-    res.status(200).json({
+    const result = await loginCustomerService(req.body);
+    return res.status(200).json({
       success: true,
-      message: "Customers retrieved successfully",
-      data: result.customers,
-      meta: result.meta,
+      message: "Login successful",
+      data: result,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
-
-export const getCustomerByIdController = async (req, res) => {
+export const getAllCustomersController = async (req, res, next) => {
   try {
-    const customer =
-      await getCustomerByIdService(
-        req.params.id
-      );
-
-    res.status(200).json({
+    const result = await getAllCustomersService(req.query);
+    return res.status(200).json({
       success: true,
-      message: "Customer retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const getCustomerByIdController = async (req, res, next) => {
+  try {
+    const customer = await getCustomerByIdService(req.params.id);
+    return res.status(200).json({
+      success: true,
       data: customer,
     });
   } catch (error) {
-    res.status(404).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
-
-export const updateCustomerController = async (req, res) => {
+export const updateCustomerController = async (req, res, next) => {
   try {
-    const customer =
-      await updateCustomerService(
-        req.params.id,
-        req.body
-      );
-
-    res.status(200).json({
+    const customer = await updateCustomerService(req.params.id, req.body);
+    return res.status(200).json({
       success: true,
       message: "Customer updated successfully",
       data: customer,
     });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
+    next(error);
+  }
+};
+export const addCustomerAddressController = async (req, res, next) => {
+  try {
+    const address = await addCustomerAddressService(req.params.id, req.body);
+    return res.status(201).json({
+      success: true,
+      message: "Address added successfully",
+      data: address,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+export const updateCustomerAddressController = async (req, res, next) => {
+  try {
+    const address = await updateCustomerAddressService(
+      req.params.id,
+      req.params.addressId,
+      req.body,
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Address updated successfully",
+      data: address,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const deleteCustomerAddressController = async (req, res, next) => {
+  try {
+    const addresses = await deleteCustomerAddressService(
+      req.params.id,
+      req.params.addressId,
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Address deleted successfully",
+      data: addresses,
+    });
+  } catch (error) {
+    next(error);
   }
 };

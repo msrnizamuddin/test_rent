@@ -7,7 +7,8 @@ import {
   updateUserTrackingService,
   deleteUserTrackingService,
 } from "../service/userTracking.service.js";
-
+import { logModule } from '../../../utils/moduleLogger.js';
+logModule(import.meta.url);
 export const createUserTrackingController = async (
   req,
   res

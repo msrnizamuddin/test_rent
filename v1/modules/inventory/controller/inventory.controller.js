@@ -5,7 +5,8 @@ import {
   updateInventoryService,
   deleteInventoryService,
 } from "../service/inventory.service.js";
-
+import { logModule } from '../../../utils/moduleLogger.js';
+logModule(import.meta.url);
 export const createInventory = async (req, res) => {
   try {
     const result = await createInventoryService(req.body);

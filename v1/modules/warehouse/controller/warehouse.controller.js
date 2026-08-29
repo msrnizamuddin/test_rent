@@ -1,57 +1,53 @@
+import tenantGetId from "../../../utils/tenentHalper.js";
 import {
   createWarehouseService,
   getAllWarehouseService,
-  getWarehouseByIdService,
+  getWarehouseByIDService,
   updateWarehouseService,
 } from "../service/warehouse.services.js";
 
-export const createWarehouse = async (req, res) => {
+export const createWarehouse = async (req, res, next) => {
   try {
-    const warehouse = await createWarehouseService(
-      req.body,
-    );
+    const tenant = await tenantGetId(req.body.tenantId);
+    if (!tenant) {
+      return res.status(404).json({
+        status: false,
+        message: "Tenant not found",
+        data: null,
+      });
+    }
 
+    const result = await createWarehouseService(req.body, tenant);
     res.status(201).json({
       success: true,
       message: "Warehouse created successfully",
-      data: warehouse,
+      data: result,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
-export const getAllWarehouse = async (req, res) => {
+export const getAllWarehouses = async (req, res, next) => {
   try {
-    const warehouses =
-      await getAllWarehouseService();
-
+    const result = await getAllWarehouseService(req.query);
     res.status(200).json({
       success: true,
-      data: warehouses,
+      message: "Warehouse fetched successfully",
+      meta: result.meta,
+      data: result.data,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
-export const getWarehouseById = async (
-  req,
-  res,
-) => {
+export const getWarehouseByID = async (req, res, next) => {
+  const id = req.params.id;
+
   try {
-    const { id } = req.params;
-
-    const warehouse =
-      await getWarehouseByIdService(id);
-
-    if (!warehouse) {
+    const result = await getWarehouseByIDService(id);
+    if (!result) {
       return res.status(404).json({
         success: false,
         message: "Warehouse not found",
@@ -60,34 +56,33 @@ export const getWarehouseById = async (
 
     res.status(200).json({
       success: true,
-      data: warehouse,
+      message: "Specific Warehouse fetched successfully",
+      data: result,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
-export const updateWarehouse = async (req, res) => {
+export const updateWarehouse = async (req, res, next) => {
+  const data = req.body;
+  const id = req.params.id;
   try {
-    const { id } = req.params;
+    const result = await updateWarehouseService(id, data);
 
-    const warehouse = await updateWarehouseService(
-      id,
-      req.body,
-    );
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: "Warehouse not found",
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: "Warehouse updated successfully",
-      data: warehouse,
+      data: result,
     });
   } catch (error) {
-    res.status(error.status || 500).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };

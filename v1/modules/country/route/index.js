@@ -1,12 +1,9 @@
 import { Router } from "express";
-import Country from "./country.route.js"
+import CountryRouter from "./country.route.js";
 const router = Router();
 
-router.get("/", (req, res) => {
-  res.json({ message: "Country route working Good ✅" });
+router.get("/health", (req, res) => {
+  res.json({ "message" : "country route working Good ✅" });
 });
-
-router.use("/", Country)
-
-
+router.use(CountryRouter);
 export default router;

@@ -34,7 +34,7 @@ for (const version of versions) {
       router.use(`/api/${version}/${mod}`, moduleRouter);
       console.log(`✅ Loaded: /api/${version}/${mod}`);
     } catch (err) {
-      console.log(`❌ Failed to load ${mod}:`, err.message);
+      console.log(`❌ Failed to load ${mod}:`, err);
     }
   }
 }

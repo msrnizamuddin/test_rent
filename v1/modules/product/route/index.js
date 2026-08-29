@@ -1,10 +1,15 @@
-import express from "express";
-import { createProduct, getAllProducts, updateProduct } from "../controller/product.controller.js";
+import { Router } from "express";
+import productRoutes from "./product.route.js";
 
-const router = express.Router();
+const router = Router();
 
-router.post("/create", createProduct);
-router.get("/all", getAllProducts);
-router.put("/update/:id", updateProduct);
+router.get("/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Product Route is working perfectly! ✅",
+  });
+});
+
+router.use("/", productRoutes);
 
 export default router;

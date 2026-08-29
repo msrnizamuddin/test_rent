@@ -19,5 +19,5 @@ const validate = (schema, property = 'body') => {
 	};
 };
 
-const validateSchema = validate
-export default validateSchema
+const brandValidateSchema = validate;
+export default brandValidateSchema;

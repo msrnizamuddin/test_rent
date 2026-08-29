@@ -1,5 +1,6 @@
 import Inventory from "../model/inventory.model.js";
-
+import { logModule } from '../../../utils/moduleLogger.js';
+logModule(import.meta.url);
 export const createInventoryService = async (payload) => {
   const inventory = await Inventory.create(payload);
 

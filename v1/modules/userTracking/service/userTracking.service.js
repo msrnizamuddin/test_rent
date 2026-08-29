@@ -1,7 +1,8 @@
 // service/userTracking.service.js
 
 import UserTracking from "../model/userTracking.model.js";
-
+import { logModule } from '../../../utils/moduleLogger.js';
+logModule(import.meta.url);
 export const createUserTrackingService = async (payload) => {
   const tracking = await UserTracking.create(payload);
 

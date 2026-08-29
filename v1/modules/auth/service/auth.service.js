@@ -57,11 +57,11 @@ export const registerService = async (payload) => {
 export const loginService = async ({ emailOrPhone, password }) => {
   // only required fields select
   const user = await Auth.findOne({
-  emailOrPhone,
-  centralStatus: "active",
-}).select(
-  "+password tenantId userType emailOrPhone supportedLanguages supportedCurrency"
-);
+    emailOrPhone,
+    centralStatus: "active",
+  }).select(
+    "+password tenantId userType emailOrPhone supportedLanguages supportedCurrency",
+  );
 
   if (!user) {
     throw new Error("Invalid credentials");

@@ -1,15 +1,17 @@
 import mongoose from "mongoose";
-import "../../brands/model/brand.model.js";
-import "../../category/model/category.model.js";
-
 const { Schema } = mongoose;
-
+const localizedStringField = {
+  type: Map,
+  of: String,
+  default: {},
+};
 const productSchema = new Schema(
   {
     tenantId: {
-      type: String,
+      type: Schema.Types.ObjectId,
       required: true,
       index: true,
+      ref: "Tenant",
     },
     centralStatus: {
       type: String,
@@ -22,13 +24,12 @@ const productSchema = new Schema(
       default: "active",
     },
     productName: {
-      type: Object,
+      ...localizedStringField,
       required: true,
     },
     productSlug: {
       type: String,
       required: true,
-      unique: true,
     },
     productImage: {
       type: String,
@@ -47,10 +48,10 @@ const productSchema = new Schema(
       default: "active",
     },
     productDescription: {
-      type: String,
+      ...localizedStringField,
     },
     productShortDescription: {
-      type: String,
+      ...localizedStringField,
     },
     productCategory: {
       type: Schema.Types.ObjectId,
@@ -58,15 +59,15 @@ const productSchema = new Schema(
     },
     productSubCategory: {
       type: Schema.Types.ObjectId,
-      ref: "Category",
+      ref: "SubCategory",
     },
     productChildCategory: {
       type: Schema.Types.ObjectId,
-      ref: "Category",
+      ref: "ChildCategory",
     },
     productBrand: {
       type: Schema.Types.ObjectId,
-      ref: "Brand",
+      ref: "Brands",
     },
     productFeatures: {
       type: Array,
@@ -76,18 +77,14 @@ const productSchema = new Schema(
       type: Number,
       default: 0,
     },
-    productYoutueURL: {
+    productYoutubeURL: {
       type: String,
     },
     productHowToCare: {
-      type: String,
+      ...localizedStringField,
     },
     deliveryInstructions: {
-      type: String,
-    },
-    inventoryItems: {
-      type: Schema.Types.ObjectId,
-      ref: "Inventory",
+      ...localizedStringField,
     },
     seoKeywords: {
       type: [String],
@@ -112,11 +109,28 @@ const productSchema = new Schema(
       ref: "User",
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true },
 );
+productSchema.index(
+  {
+    tenantId: 1,
+    productSlug: 1,
+  },
+  {
+    unique: true,
+  },
+);
+productSchema.virtual("inventoryItems", {
+  ref: "Inventory",
+  localField: "_id",
+  foreignField: "productId",
+});
+productSchema.set("toJSON", {
+  virtuals: true,
+});
 
+productSchema.set("toObject", {
+  virtuals: true,
+});
 const Product = mongoose.model("Product", productSchema);
-
 export default Product;

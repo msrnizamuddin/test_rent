@@ -1,21 +1,12 @@
 import { Router } from "express";
-import brandController from '../controller/createBrand.js';
-import validate from '../middleware/validate.js';
-import schema from '../validation/brand.validation.js';
+import BrandsRouter from "./brands.route.js";
+
 const router = Router();
-router.get('/test', (req, res) => {
-	res.status(200).json({
-		success: true,
-		message: 'Brand  module routes are active! 🚀'
-	});
+
+router.get("/health", (req, res) => {
+  res.json({ message: "Brands route working Good ✅" });
 });
 
-router.post('/createBrand', validate(schema), brandController.createBrand);
-router.get('/getBrand', brandController.getBrands);
-router.get('/getBrand/:id', brandController.getBrandById);
-router.patch('/update/:id', brandController.updateBrand);
-router.delete('/delete/:id', brandController.deleteBrand);
-router.put('/update/:id', brandController.updateBrand);
-
+router.use("/", BrandsRouter);
 
 export default router;

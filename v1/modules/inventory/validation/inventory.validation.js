@@ -1,6 +1,7 @@
 import Joi from "joi";
 import mongoose from "mongoose";
-
+import { logModule } from "../../../utils/moduleLogger.js";
+logModule(import.meta.url);
 const objectId = (value, helpers) => {
   if (!mongoose.Types.ObjectId.isValid(value)) {
     return helpers.message("invalid objectId");
@@ -31,6 +32,7 @@ export const updateInventoryValidation = Joi.object({
   productPurchasePrice: Joi.number().min(1),
   basePrice: Joi.number().min(1),
   productOpeningStock: Joi.number().min(1),
+
   createdBy: Joi.string().hex().length(24),
   updatedBy: Joi.string().hex().length(24),
 }).min(1);

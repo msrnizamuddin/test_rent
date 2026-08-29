@@ -1,13 +1,22 @@
+import express from 'express';
 
-import express from "express";
-import * as Controller from "../Controller/Country.controller.js"
+const router = express.Router();
+import { logModule } from '../../../utils/moduleLogger.js';
+import { countryValidation } from '../validation/country.validation.js';
+import { createCountry, getCountry, getCountryByID, updateCountry } from '../controller/country.controller.js';
+import { validate } from "../../../middleware/validate.middleware.js";
 
-const router = express.Router()
+logModule(import.meta.url);
+router.post(
+	'/',
+	validate(countryValidation.createCountry),
+createCountry
+);
+router.get('/', getCountry);
+router.get('/:id', getCountryByID);
+router.patch('/:id',
+	validate(countryValidation.updateCountry),
+	updateCountry);
+const CountryRouter = router;
 
-
-router.post("/createCountry" , Controller.createCountry)
-router.get("/all", Controller.getCountry)
-router.get('/country/:id', Controller.getCountryByID)
-router.patch("/editCountry/:id", Controller.updateCountry)
-
-export default router
+export default CountryRouter;

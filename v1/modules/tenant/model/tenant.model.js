@@ -7,7 +7,7 @@ const tenantSchema = new mongoose.Schema(
     tenantId: {
       type: String,
       unique: true,
-      required: true, 
+      required: true,
       default: uuidv4,
       immutable: true,
     },
@@ -21,6 +21,12 @@ const tenantSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    languages: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Language",
+      },
+    ],
     businessEmail: {
       type: String,
       unique: true,
@@ -101,4 +107,12 @@ const tenantSchema = new mongoose.Schema(
     versionKey: false,
   },
 );
+
+tenantSchema.index({ centralStatus: 1, createdAt: -1 }); // filter + sort combo
+tenantSchema.index({
+  fullName: "text",
+  businessName: "text",
+  businessEmail: "text",
+});
+
 export default mongoose.model("Tenant", tenantSchema);

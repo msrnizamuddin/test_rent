@@ -1,7 +1,8 @@
 // validation/userTracking.validation.js
 import Joi from "joi";
 import mongoose from "mongoose";
-
+import { logModule } from '../../../utils/moduleLogger.js';
+logModule(import.meta.url);
 const objectId = (value, helpers) => {
   if (!mongoose.Types.ObjectId.isValid(value)) {
     return helpers.message("Invalid ObjectId");

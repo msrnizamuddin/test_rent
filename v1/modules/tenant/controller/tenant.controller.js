@@ -2,11 +2,13 @@ import {
   getAllTenantService,
   updateTenantService,
 } from "../service/tenant.service.js";
-export const getAllTenant = async (req, res) => {
-  try {
-    const tenant = await getAllTenantService();
 
-    if (!tenant || tenant.length === 0) {
+
+export const getAllTenant = async (req, res, next) => {
+  try {
+    const result = await getAllTenantService(req.query);
+
+    if (!result.data || result.data.length === 0) {
       return res.status(404).json({
         success: false,
         message: "Tenant not found",
@@ -15,29 +17,24 @@ export const getAllTenant = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: tenant,
+      message: "Tenant fetched successfully",
+      meta: result.meta,
+      data: result.data,
     });
   } catch (error) {
-    console.error("❌ Error fetching tenant:", error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Server error while fetching tenant",
-    });
+    next(error);
   }
 };
 
-export const updateTenant = async (req, res) => {
+export const updateTenant = async (req, res, next) => {
   try {
-    const { tenantId } = req.params;
+    const { id } = req.params;
     const updates = req.body;
+    const userId = req.user?._id;
 
-    const result = await updateTenantService(tenantId, updates);
+    const result = await updateTenantService(id, updates, userId);
     return res.status(result.status).json(result);
   } catch (error) {
-    console.error("❌ Error updating tenant:", error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Server error while updating tenant",
-    });
+    next(error);
   }
 };

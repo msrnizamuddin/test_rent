@@ -1,7 +1,8 @@
 // model/userTracking.model.js
 
 import mongoose from "mongoose";
-
+import { logModule } from '../../../utils/moduleLogger.js';
+logModule(import.meta.url);
 const userTrackingSchema = new mongoose.Schema(
   {
     // Optional if user is logged in

@@ -1,7 +1,8 @@
 // route/userTracking.route.js
 
 import express from "express";
-
+import { logModule } from '../../../utils/moduleLogger.js';
+logModule(import.meta.url);
 import {
   createUserTrackingController,
   getAllUserTrackingsController,
@@ -17,19 +18,14 @@ import {
 } from "../validation/userTracking.validation.js";
 
 import {
-  validate,
+
   validateParams,
 } from "../../auth/middleware/validate.middleware.js";
 
+import { validate } from "../../../middleware/validate.middleware.js";
+
 const router = express.Router();
-router.get(
-  "/ping",
-  (req, res) => {
-    res.status(200).json({
-      message: "Module is alive!",
-    });
-  },
-);
+
 router.post(
   "/",
   validate(createUserTrackingValidation),
@@ -37,7 +33,7 @@ router.post(
 );
 
 router.get(
-  "/all",
+  "/",
   getAllUserTrackingsController
 );
 

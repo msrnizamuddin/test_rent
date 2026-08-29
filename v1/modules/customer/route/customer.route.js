@@ -4,29 +4,44 @@ import {
   getAllCustomersController,
   getCustomerByIdController,
   updateCustomerController,
+  addCustomerAddressController,
+  updateCustomerAddressController,
+  deleteCustomerAddressController,
 } from "../controller/customer.controller.js";
 import {
   createCustomerValidation,
   updateCustomerValidation,
+  addCustomerAddressValidation,
+  updateCustomerAddressValidation,
 } from "../validation/customer.validation.js";
-import { validate } from "../../auth/middleware/validate.middleware.js";
+import { validate } from "../../../middleware/validate.middleware.js";
+import { logModule } from "../../../utils/moduleLogger.js";
+logModule(import.meta.url);
 const customerRouter = express.Router();
 customerRouter.post(
-  "/create",
+  "/",
   validate(createCustomerValidation),
-  createCustomerController
+  createCustomerController,
 );
-customerRouter.get(
-  "/all",
-  getAllCustomersController
+customerRouter.get("/", getAllCustomersController);
+customerRouter.post(
+  "/:id/addresses",
+  validate(addCustomerAddressValidation),
+  addCustomerAddressController,
 );
-customerRouter.get(
-  "/:id",
-  getCustomerByIdController
+customerRouter.patch(
+  "/:id/addresses/:addressId",
+  validate(updateCustomerAddressValidation),
+  updateCustomerAddressController,
 );
-customerRouter.put(
+customerRouter.delete(
+  "/:id/addresses/:addressId",
+  deleteCustomerAddressController,
+);
+customerRouter.get("/:id", getCustomerByIdController);
+customerRouter.patch(
   "/:id",
   validate(updateCustomerValidation),
-  updateCustomerController
+  updateCustomerController,
 );
 export default customerRouter;

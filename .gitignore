@@ -1,6 +1,6 @@
 # Node modules
 node_modules/
-
+/scripts/
 # Logs
 logs
 *.log
@@ -50,5 +50,7 @@ Thumbs.db
 *.tmp
 *.temp
 patchTest.txt
-sizes/
 api.txt
+productCreationFlow.md
+orderCreationFlow.md
+invoiceModelFlow.md

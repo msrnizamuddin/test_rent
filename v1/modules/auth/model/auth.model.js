@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-
+import { logModule } from '../../../utils/moduleLogger.js';
+logModule(import.meta.url);
 const authSchema = new mongoose.Schema(
   {
     // identity
