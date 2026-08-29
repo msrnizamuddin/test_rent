@@ -1,67 +1,157 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { logModule } from '../../../utils/moduleLogger.js';
-logModule(import.meta.url);
-const authSchema = new mongoose.Schema(
+
+const userSchema = new mongoose.Schema(
   {
-    // identity
-    tenantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Tenant",
-    },
-
-    userType: {
+    // ---------------- Role-based access ----------------
+    role: {
       type: String,
-      enum: ["superadmin", "tenant"],
-      default: "tenant",
+      enum: ["superadmin", "manager", "driver", "customer"],
+      required: true,
+      default: "customer",
     },
 
-    // login credentials
-    emailOrPhone: {
+    // Manager permission toggles (set by Super Admin, only used when role === "manager")
+    permissions: {
+      userManagement: { type: Boolean, default: false },
+      vehicleManagement: { type: Boolean, default: false },
+      driverManagement: { type: Boolean, default: false },
+      bookingManagement: { type: Boolean, default: false },
+      paymentManagement: { type: Boolean, default: false },
+      reports: { type: Boolean, default: false },
+      settings: { type: Boolean, default: false },
+    },
+
+    // ---------------- 1.1 Registration ----------------
+    fullName: {
       type: String,
       required: true,
       trim: true,
     },
 
-		password: {
-			type: String,
-			required: true,
-			minlength: 8,
-			select: false
-		},
+    mobileNumber: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true,
+    },
 
-    // central control
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      unique: true,
+      sparse: true,
+    },
+
+    password: {
+      type: String,
+      required: true,
+      minlength: 8,
+      select: false,
+    },
+
+    address: {
+      presentAddress: { type: String, trim: true },
+      permanentAddress: { type: String, trim: true },
+      city: { type: String, trim: true },
+      district: { type: String, trim: true },
+      postCode: { type: String, trim: true },
+      country: { type: String, trim: true, default: "Bangladesh" },
+    },
+
+    // NID / Passport — required for customer & driver
+    identification: {
+      type: {
+        type: String,
+        enum: ["nid", "passport"],
+      },
+      number: { type: String, trim: true },
+      frontImage: { type: String },
+      backImage: { type: String },
+      expiryDate: { type: Date }, // relevant for passport
+    },
+
+    // Driving License — required for driver, optional for customer (self-drive rentals)
+    drivingLicense: {
+      number: { type: String, trim: true },
+      issueDate: { type: Date },
+      expiryDate: { type: Date },
+      frontImage: { type: String },
+      backImage: { type: String },
+    },
+
+    profilePicture: {
+      type: String, // URL / path
+    },
+
+    documents: [
+      {
+        title: { type: String, trim: true },
+        fileUrl: { type: String },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    // ---------------- 1.2 Authentication ----------------
     centralStatus: {
       type: String,
-      enum: ["active", "inactive"],
+      enum: ["active", "inactive", "suspended", "blocked"],
       default: "active",
     },
 
-    // other information
-    supportedLanguages: {
-      type: [String],
-      default: [],
+    isActivated: {
+      type: Boolean,
+      default: false,
     },
 
-    supportedCurrency: {
-      type: [String],
-      default: [],
+    lastLoginAt: {
+      type: Date,
     },
 
-    // audit
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Auth",
+    // Driver-specific operational status (used only when role === "driver")
+    driverStatus: {
+      type: String,
+      enum: [
+        "pending",
+        "approved",
+        "available",
+        "assigned",
+        "on-trip",
+        "offline",
+        "suspended",
+        "inactive",
+      ],
     },
 
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Auth",
+    otp: {
+      code: { type: String, select: false },
+      purpose: {
+        type: String,
+        enum: ["registration", "login", "reset-password", "change-mobile"],
+        select: false,
+      },
+      expiresAt: { type: Date, select: false },
     },
 
     // security
     verificationToken: {
       type: String,
+      select: false,
+    },
+
+    resetPasswordToken: {
+      type: String,
+      select: false,
+    },
+
+    resetPasswordExpires: {
+      type: Date,
       select: false,
     },
 
@@ -73,6 +163,29 @@ const authSchema = new mongoose.Schema(
     tokenExpiration: {
       type: Date,
     },
+
+    // security & audit (module 30)
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+
+    lastLoginIp: {
+      type: String,
+      select: false,
+    },
+
+    // audit
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
   {
     timestamps: true,
@@ -80,12 +193,15 @@ const authSchema = new mongoose.Schema(
   },
 );
 
-// Same tenant-এর মধ্যে email/phone unique
-authSchema.index({ tenantId: 1, emailOrPhone: 1 }, { unique: true });
+// Hash password before save
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+  this.password = await bcrypt.hash(this.password, 10);
+});
 
 // Password verification helper
-authSchema.methods.comparePassword = async function (plainPassword) {
+userSchema.methods.comparePassword = async function (plainPassword) {
   return bcrypt.compare(plainPassword, this.password);
 };
 
-export default mongoose.model("Auth", authSchema);
+export default mongoose.model("User", userSchema);

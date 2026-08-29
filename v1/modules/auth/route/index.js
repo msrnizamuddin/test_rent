@@ -1,9 +1,6 @@
 import { Router } from "express";
 import auth from "./auth.route.js";
 
-import { logModule } from "../../../utils/moduleLogger.js";
-import customerLoginRoute from "./customer.route.js";
-logModule(import.meta.url);
 const router = Router();
 
 router.get("/health", (req, res) => {
@@ -11,6 +8,5 @@ router.get("/health", (req, res) => {
 });
 
 router.use("/", auth);
-router.use("/customer", customerLoginRoute);
 
 export default router;
