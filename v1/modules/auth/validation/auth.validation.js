@@ -110,7 +110,7 @@ export const createStaffValidation = Joi.object({
     otherwise: Joi.forbidden(),
   }),
 
-  createdBy: objectId.required(),
+  // injected by the controller from req.user.id — never accepted from the client
 });
 
 // One-time bootstrap: create the very first superadmin (no auth required,

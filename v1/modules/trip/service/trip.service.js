@@ -47,11 +47,13 @@ const listTrips = async ({ status, driverId, customerId, page, limit }) => {
 // action -> [allowed current statuses, next status, extra column updates]
 const ACTION_TRANSITIONS = {
   accept: {
-    from: ["driver_assigned"],
+    // Trips are created directly in status "confirmed" (see rental-request
+    // service's assignDriver hookup) — that is the driver's starting point.
+    from: ["confirmed", "vehicle_assigned", "driver_assigned"],
     to: "driver_accepted",
   },
   reject: {
-    from: ["driver_assigned", "driver_accepted"],
+    from: ["confirmed", "vehicle_assigned", "driver_assigned", "driver_accepted"],
     to: "cancelled",
   },
   "on-the-way": {
