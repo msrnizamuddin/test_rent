@@ -1,4 +1,13 @@
+import dotenv from "dotenv";
 import pg from "pg";
+
+// ES module imports are hoisted and evaluated before any of the importing
+// module's own top-level statements run — so server.js's `dotenv.config()`
+// call executes AFTER this module (and its `new Pool(...)` below) has
+// already loaded if we relied on the caller for it. Load .env here too so
+// DATABASE_URL is always set before the pool is constructed, regardless of
+// import order.
+dotenv.config();
 
 const { Pool } = pg;
 
