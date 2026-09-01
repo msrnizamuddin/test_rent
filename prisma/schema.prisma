@@ -1,0 +1,541 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// 1. Users (Super Admin / Manager / Driver / Customer)
+// ---------------------------------------------------------------------------
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  role        UserRole @default(customer)
+  permissions Json     @default("{}")
+
+  fullName     String  @map("full_name")
+  mobileNumber String  @unique @map("mobile_number")
+  email        String? @unique
+  password     String
+
+  address        Json?
+  identification Json?
+  drivingLicense Json?   @map("driving_license")
+  profilePicture String? @map("profile_picture")
+  documents      Json    @default("[]")
+
+  isVerified    Boolean       @default(false) @map("is_verified")
+  centralStatus CentralStatus @default(active) @map("central_status")
+  isActivated   Boolean       @default(false) @map("is_activated")
+  lastLoginAt   DateTime?     @map("last_login_at") @db.Timestamptz
+
+  driverStatus DriverStatus? @map("driver_status")
+
+  otpCode      String?     @map("otp_code")
+  otpPurpose   OtpPurpose? @map("otp_purpose")
+  otpExpiresAt DateTime?   @map("otp_expires_at") @db.Timestamptz
+
+  verificationToken    String?   @map("verification_token")
+  resetPasswordToken   String?   @map("reset_password_token")
+  resetPasswordExpires DateTime? @map("reset_password_expires") @db.Timestamptz
+
+  failedLoginAttempts Int     @default(0) @map("failed_login_attempts")
+  lastLoginIp         String? @map("last_login_ip")
+
+  createdById String? @map("created_by") @db.Uuid
+  createdBy   User?   @relation("UserCreatedBy", fields: [createdById], references: [id])
+  updatedById String? @map("updated_by") @db.Uuid
+  updatedBy   User?   @relation("UserUpdatedBy", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  createdUsers User[] @relation("UserCreatedBy")
+  updatedUsers User[] @relation("UserUpdatedBy")
+
+  vehiclesCreated Vehicle[] @relation("VehicleCreatedBy")
+  vehiclesUpdated Vehicle[] @relation("VehicleUpdatedBy")
+
+  rentalRequestsAsCustomer RentalRequest[] @relation("RentalRequestCustomer")
+  rentalRequestsAsDriver   RentalRequest[] @relation("RentalRequestDriver")
+  rentalRequestsReviewed   RentalRequest[] @relation("RentalRequestReviewer")
+
+  tripsAsCustomer Trip[] @relation("TripCustomer")
+  tripsAsDriver   Trip[] @relation("TripDriver")
+
+  payments      Payment[]      @relation("PaymentCustomer")
+  notifications Notification[]
+
+  reviewsAsCustomer Review[] @relation("ReviewCustomer")
+  reviewsAsDriver   Review[] @relation("ReviewDriver")
+
+  @@index([role])
+  @@index([centralStatus])
+  @@index([driverStatus])
+  @@map("users")
+}
+
+enum UserRole {
+  superadmin
+  manager
+  driver
+  customer
+
+  @@map("user_role")
+}
+
+enum CentralStatus {
+  active
+  inactive
+  suspended
+  blocked
+
+  @@map("central_status")
+}
+
+enum DriverStatus {
+  pending
+  approved
+  available
+  assigned
+  on_trip   @map("on-trip")
+  offline
+  suspended
+  inactive
+
+  @@map("driver_status")
+}
+
+enum OtpPurpose {
+  registration
+  login
+  reset_password @map("reset-password")
+  change_mobile  @map("change-mobile")
+
+  @@map("otp_purpose")
+}
+
+// ---------------------------------------------------------------------------
+// 2. Vehicle Categories
+// ---------------------------------------------------------------------------
+model VehicleCategory {
+  id          String         @id @default(uuid()) @db.Uuid
+  name        String         @unique
+  description String?
+  image       String?
+  status      CategoryStatus @default(active)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  vehicles Vehicle[]
+
+  @@map("vehicle_categories")
+}
+
+enum CategoryStatus {
+  active
+  inactive
+
+  @@map("category_status")
+}
+
+// ---------------------------------------------------------------------------
+// 3. Vehicles
+// ---------------------------------------------------------------------------
+model Vehicle {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  vehicleName         String                    @map("vehicle_name")
+  brand               String
+  vehicleModel        String                    @map("vehicle_model")
+  categoryId          String?                   @map("category_id") @db.Uuid
+  category            VehicleCategory?          @relation(fields: [categoryId], references: [id])
+  vehicleType         VehicleType               @map("vehicle_type")
+  images              String[]                  @default([])
+  registrationNumber  String                    @unique @map("registration_number")
+  modelYear           Int                       @map("model_year")
+  seatingCapacity     Int                       @map("seating_capacity")
+  fuelType            FuelType                  @map("fuel_type")
+  transmission        Transmission
+  isAC                Boolean                   @default(true) @map("is_ac")
+  features            String[]                  @default([])
+  color               String?
+  location            Json?
+  estimatedRentalRate Json?                     @map("estimated_rental_rate")
+  availabilityStatus  VehicleAvailabilityStatus @default(pending) @map("availability_status")
+  driverRequired      Boolean                   @default(false) @map("driver_required")
+  ownerInfo           Json?                     @map("owner_info")
+  documents           Json                      @default("[]")
+
+  createdById String? @map("created_by") @db.Uuid
+  createdBy   User?   @relation("VehicleCreatedBy", fields: [createdById], references: [id])
+  updatedById String? @map("updated_by") @db.Uuid
+  updatedBy   User?   @relation("VehicleUpdatedBy", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  rentalRequests         RentalRequest[] @relation("RentalRequestVehicle")
+  rentalRequestsAssigned RentalRequest[] @relation("RentalRequestAssignedVehicle")
+  trips                  Trip[]
+  reviews                Review[]
+
+  @@index([categoryId])
+  @@index([vehicleType])
+  @@index([availabilityStatus])
+  @@map("vehicles")
+}
+
+enum VehicleType {
+  sedan
+  suv
+  hatchback
+  microbus
+  minibus
+  bus
+  pickup
+  van
+  coaster
+  other
+
+  @@map("vehicle_type")
+}
+
+enum FuelType {
+  petrol
+  diesel
+  cng
+  electric
+  hybrid
+
+  @@map("fuel_type")
+}
+
+enum Transmission {
+  manual
+  automatic
+
+  @@map("transmission")
+}
+
+enum VehicleAvailabilityStatus {
+  pending
+  approved
+  rejected
+  available
+  assigned
+  on_trip     @map("on-trip")
+  maintenance
+  inactive
+
+  @@map("vehicle_availability_status")
+}
+
+// ---------------------------------------------------------------------------
+// 4. Locations
+// ---------------------------------------------------------------------------
+model Location {
+  id        String       @id @default(uuid()) @db.Uuid
+  name      String
+  address   String?
+  city      String?
+  district  String?
+  latitude  Decimal?     @db.Decimal
+  longitude Decimal?     @db.Decimal
+  type      LocationType @default(popular)
+  isActive  Boolean      @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([city])
+  @@map("locations")
+}
+
+enum LocationType {
+  pickup
+  dropoff
+  popular
+
+  @@map("location_type")
+}
+
+// ---------------------------------------------------------------------------
+// 5. Rental Requests
+// ---------------------------------------------------------------------------
+model RentalRequest {
+  id         String   @id @default(uuid()) @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  customer   User     @relation("RentalRequestCustomer", fields: [customerId], references: [id])
+  tripType   TripType @map("trip_type")
+  vehicleId  String?  @map("vehicle_id") @db.Uuid
+  vehicle    Vehicle? @relation("RentalRequestVehicle", fields: [vehicleId], references: [id])
+
+  pickupLocation Json  @map("pickup_location")
+  destination    Json
+  returnLocation Json? @map("return_location")
+
+  pickupDate DateTime  @map("pickup_date") @db.Date
+  pickupTime String    @map("pickup_time")
+  returnDate DateTime? @map("return_date") @db.Date
+  returnTime String?   @map("return_time")
+
+  passengerCount      Int     @default(1) @map("passenger_count")
+  driverRequired      Boolean @default(false) @map("driver_required")
+  specialInstructions String? @map("special_instructions")
+  contactNumber       String  @map("contact_number")
+
+  estimatedDistanceKm Decimal? @map("estimated_distance_km") @db.Decimal
+  estimatedRent       Json?    @map("estimated_rent")
+  finalRent           Decimal? @map("final_rent") @db.Decimal
+
+  status RentalRequestStatus @default(draft)
+
+  assignedVehicleId String?  @map("assigned_vehicle_id") @db.Uuid
+  assignedVehicle   Vehicle? @relation("RentalRequestAssignedVehicle", fields: [assignedVehicleId], references: [id])
+  assignedDriverId  String?  @map("assigned_driver_id") @db.Uuid
+  assignedDriver    User?    @relation("RentalRequestDriver", fields: [assignedDriverId], references: [id])
+
+  adminNotes         String?   @map("admin_notes")
+  callNotes          String?   @map("call_notes")
+  cancellationReason String?   @map("cancellation_reason")
+  confirmedAt        DateTime? @map("confirmed_at") @db.Timestamptz
+  reviewedById       String?   @map("reviewed_by") @db.Uuid
+  reviewedBy         User?     @relation("RentalRequestReviewer", fields: [reviewedById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  trip Trip?
+
+  @@index([customerId])
+  @@index([status])
+  @@map("rental_requests")
+}
+
+enum TripType {
+  single
+  round
+  down
+
+  @@map("trip_type")
+}
+
+enum RentalRequestStatus {
+  draft
+  submitted
+  under_review
+  estimate_provided
+  waiting_confirmation
+  confirmed
+  vehicle_assigned
+  driver_assigned
+  trip_started
+  trip_completed
+  cancelled
+  rejected
+
+  @@map("rental_request_status")
+}
+
+// ---------------------------------------------------------------------------
+// 6. Trips
+// ---------------------------------------------------------------------------
+model Trip {
+  id              String        @id @default(uuid()) @db.Uuid
+  rentalRequestId String        @unique @map("rental_request_id") @db.Uuid
+  rentalRequest   RentalRequest @relation(fields: [rentalRequestId], references: [id])
+  customerId      String        @map("customer_id") @db.Uuid
+  customer        User          @relation("TripCustomer", fields: [customerId], references: [id])
+  vehicleId       String?       @map("vehicle_id") @db.Uuid
+  vehicle         Vehicle?      @relation(fields: [vehicleId], references: [id])
+  driverId        String?       @map("driver_id") @db.Uuid
+  driver          User?         @relation("TripDriver", fields: [driverId], references: [id])
+
+  tripType       TripType @map("trip_type")
+  pickupLocation Json     @map("pickup_location")
+  destination    Json
+  returnLocation Json?    @map("return_location")
+
+  pickupDate DateTime  @map("pickup_date") @db.Date
+  pickupTime String    @map("pickup_time")
+  returnDate DateTime? @map("return_date") @db.Date
+  returnTime String?   @map("return_time")
+
+  estimatedDistanceKm Decimal? @map("estimated_distance_km") @db.Decimal
+  finalRent           Decimal? @map("final_rent") @db.Decimal
+
+  paymentStatus PaymentStatus @default(pending) @map("payment_status")
+  status        TripStatus    @default(confirmed)
+
+  driverCurrentLocation Json?     @map("driver_current_location")
+  startedAt             DateTime? @map("started_at") @db.Timestamptz
+  completedAt           DateTime? @map("completed_at") @db.Timestamptz
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  payments Payment[]
+  invoice  Invoice?
+  reviews  Review[]
+
+  @@index([customerId])
+  @@index([driverId])
+  @@index([status])
+  @@map("trips")
+}
+
+enum TripStatus {
+  confirmed
+  vehicle_assigned
+  driver_assigned
+  driver_accepted
+  driver_on_the_way
+  customer_picked_up
+  trip_started
+  trip_in_progress
+  destination_reached
+  return_started
+  trip_completed
+  cancelled
+
+  @@map("trip_status")
+}
+
+// ---------------------------------------------------------------------------
+// 7. Payments
+// ---------------------------------------------------------------------------
+model Payment {
+  id         String @id @default(uuid()) @db.Uuid
+  tripId     String @map("trip_id") @db.Uuid
+  trip       Trip   @relation(fields: [tripId], references: [id])
+  customerId String @map("customer_id") @db.Uuid
+  customer   User   @relation("PaymentCustomer", fields: [customerId], references: [id])
+
+  amount        Decimal       @db.Decimal
+  paymentType   PaymentType   @default(full) @map("payment_type")
+  method        PaymentMethod
+  status        PaymentStatus @default(pending)
+  transactionId String?       @map("transaction_id")
+  paidAt        DateTime?     @map("paid_at") @db.Timestamptz
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tripId])
+  @@index([customerId])
+  @@map("payments")
+}
+
+enum PaymentType {
+  advance
+  full
+
+  @@map("payment_type")
+}
+
+enum PaymentMethod {
+  cash
+  online
+  mobile_banking
+  card
+
+  @@map("payment_method")
+}
+
+enum PaymentStatus {
+  pending
+  partial
+  paid
+  failed
+  refunded
+  cancelled
+
+  @@map("payment_status")
+}
+
+// ---------------------------------------------------------------------------
+// 8. Invoices
+// ---------------------------------------------------------------------------
+model Invoice {
+  id            String @id @default(uuid()) @db.Uuid
+  tripId        String @unique @map("trip_id") @db.Uuid
+  trip          Trip   @relation(fields: [tripId], references: [id])
+  invoiceNumber String @unique @map("invoice_number")
+
+  rentalCharge      Decimal @default(0) @map("rental_charge") @db.Decimal
+  driverCharge      Decimal @default(0) @map("driver_charge") @db.Decimal
+  additionalCharges Decimal @default(0) @map("additional_charges") @db.Decimal
+  tax               Decimal @default(0) @db.Decimal
+  discount          Decimal @default(0) @db.Decimal
+  total             Decimal @default(0) @db.Decimal
+  paidAmount        Decimal @default(0) @map("paid_amount") @db.Decimal
+  dueAmount         Decimal @default(0) @map("due_amount") @db.Decimal
+
+  paymentStatus PaymentStatus @default(pending) @map("payment_status")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("invoices")
+}
+
+// ---------------------------------------------------------------------------
+// 9. Notifications
+// ---------------------------------------------------------------------------
+model Notification {
+  id       String              @id @default(uuid()) @db.Uuid
+  userId   String              @map("user_id") @db.Uuid
+  user     User                @relation(fields: [userId], references: [id])
+  title    String
+  message  String
+  type     String?
+  channel  NotificationChannel @default(in_app)
+  isRead   Boolean             @default(false) @map("is_read")
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+enum NotificationChannel {
+  push
+  in_app
+  sms
+  email
+
+  @@map("notification_channel")
+}
+
+// ---------------------------------------------------------------------------
+// 10. Reviews & Ratings
+// ---------------------------------------------------------------------------
+model Review {
+  id         String   @id @default(uuid()) @db.Uuid
+  tripId     String   @map("trip_id") @db.Uuid
+  trip       Trip     @relation(fields: [tripId], references: [id])
+  customerId String   @map("customer_id") @db.Uuid
+  customer   User     @relation("ReviewCustomer", fields: [customerId], references: [id])
+  driverId   String?  @map("driver_id") @db.Uuid
+  driver     User?    @relation("ReviewDriver", fields: [driverId], references: [id])
+  vehicleId  String?  @map("vehicle_id") @db.Uuid
+  vehicle    Vehicle? @relation(fields: [vehicleId], references: [id])
+
+  driverRating  Int?    @map("driver_rating")
+  vehicleRating Int?    @map("vehicle_rating")
+  reviewText    String? @map("review_text")
+  isHidden      Boolean @default(false) @map("is_hidden")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tripId, customerId])
+  @@index([driverId])
+  @@index([vehicleId])
+  @@map("reviews")
+}

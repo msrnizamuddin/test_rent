@@ -1,46 +1,55 @@
-import { query } from "../../../../config/db.js";
+import { prisma } from "../../../../config/db.js";
+
+// Prisma enum member names can't contain hyphens, so the "on-trip" value
+// (also used by driverStatus/rental workflows) is stored as availabilityStatus
+// "on_trip" with a @map() back to "on-trip" on disk. Keep the wire-facing API
+// on the original hyphenated spelling despite that.
+const AVAILABILITY_TO_ENUM = { "on-trip": "on_trip" };
+const AVAILABILITY_FROM_ENUM = { on_trip: "on-trip" };
+const toAvailabilityEnum = (v) => (v ? AVAILABILITY_TO_ENUM[v] || v : v);
+const fromAvailabilityEnum = (v) => (v ? AVAILABILITY_FROM_ENUM[v] || v : v);
 
 const mapVehicle = (row) => {
   if (!row) return null;
+  const { createdById, updatedById, ...rest } = row;
   return {
-    id: row.id,
-    vehicleName: row.vehicle_name,
-    brand: row.brand,
-    vehicleModel: row.vehicle_model,
-    categoryId: row.category_id,
-    category: row.category, // populated by joined queries only
-    vehicleType: row.vehicle_type,
-    images: row.images,
-    registrationNumber: row.registration_number,
-    modelYear: row.model_year,
-    seatingCapacity: row.seating_capacity,
-    fuelType: row.fuel_type,
-    transmission: row.transmission,
-    isAC: row.is_ac,
-    features: row.features,
-    color: row.color,
-    location: row.location,
-    estimatedRentalRate: row.estimated_rental_rate,
-    availabilityStatus: row.availability_status,
-    driverRequired: row.driver_required,
-    ownerInfo: row.owner_info,
-    documents: row.documents,
-    createdBy: row.created_by,
-    updatedBy: row.updated_by,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    ...rest,
+    availabilityStatus: fromAvailabilityEnum(row.availabilityStatus),
+    ...(createdById !== undefined ? { createdBy: createdById } : {}),
+    ...(updatedById !== undefined ? { updatedBy: updatedById } : {}),
   };
 };
 
-const COLUMNS = `
-  id, vehicle_name, brand, vehicle_model, category_id, vehicle_type, images,
-  registration_number, model_year, seating_capacity, fuel_type, transmission,
-  is_ac, features, color, location, estimated_rental_rate, availability_status,
-  driver_required, owner_info, documents, created_by, updated_by, created_at, updated_at
-`;
+const SELECT = {
+  id: true,
+  vehicleName: true,
+  brand: true,
+  vehicleModel: true,
+  categoryId: true,
+  vehicleType: true,
+  images: true,
+  registrationNumber: true,
+  modelYear: true,
+  seatingCapacity: true,
+  fuelType: true,
+  transmission: true,
+  isAC: true,
+  features: true,
+  color: true,
+  location: true,
+  estimatedRentalRate: true,
+  availabilityStatus: true,
+  driverRequired: true,
+  ownerInfo: true,
+  documents: true,
+  createdById: true,
+  updatedById: true,
+  createdAt: true,
+  updatedAt: true,
+};
 
 // Browsing only shows vehicles that are actually rentable/visible to the public
-const PUBLICLY_VISIBLE_STATUSES = ["available", "assigned", "on-trip"];
+const PUBLICLY_VISIBLE_STATUSES = ["available", "assigned", "on_trip"];
 
 const search = async ({
   search: searchTerm,
@@ -60,197 +69,166 @@ const search = async ({
   sortBy,
   sortOrder,
 }) => {
-  const conditions = [];
-  const values = [];
-
-  if (availability) {
-    values.push(availability);
-    conditions.push(`availability_status = $${values.length}`);
-  } else {
-    values.push(PUBLICLY_VISIBLE_STATUSES);
-    conditions.push(`availability_status = ANY($${values.length})`);
-  }
+  const where = {
+    availabilityStatus: availability
+      ? toAvailabilityEnum(availability)
+      : { in: PUBLICLY_VISIBLE_STATUSES },
+  };
 
   if (searchTerm) {
-    values.push(`%${searchTerm}%`);
-    const idx = values.length;
-    conditions.push(`(vehicle_name ILIKE $${idx} OR brand ILIKE $${idx})`);
+    where.OR = [
+      { vehicleName: { contains: searchTerm, mode: "insensitive" } },
+      { brand: { contains: searchTerm, mode: "insensitive" } },
+    ];
   }
-  if (brand) {
-    values.push(brand);
-    conditions.push(`brand ILIKE $${values.length}`);
-  }
-  if (categoryId) {
-    values.push(categoryId);
-    conditions.push(`category_id = $${values.length}`);
-  }
-  if (vehicleType) {
-    values.push(vehicleType);
-    conditions.push(`vehicle_type = $${values.length}`);
-  }
-  if (seatingCapacity) {
-    values.push(seatingCapacity);
-    conditions.push(`seating_capacity >= $${values.length}`);
-  }
-  if (typeof isAC === "boolean") {
-    values.push(isAC);
-    conditions.push(`is_ac = $${values.length}`);
-  }
-  if (transmission) {
-    values.push(transmission);
-    conditions.push(`transmission = $${values.length}`);
-  }
-  if (fuelType) {
-    values.push(fuelType);
-    conditions.push(`fuel_type = $${values.length}`);
-  }
+  if (brand) where.brand = { equals: brand, mode: "insensitive" };
+  if (categoryId) where.categoryId = categoryId;
+  if (vehicleType) where.vehicleType = vehicleType;
+  if (seatingCapacity) where.seatingCapacity = { gte: seatingCapacity };
+  if (typeof isAC === "boolean") where.isAC = isAC;
+  if (transmission) where.transmission = transmission;
+  if (fuelType) where.fuelType = fuelType;
+
   if (location) {
-    values.push(`%${location}%`);
-    const idx = values.length;
-    conditions.push(
-      `(location->>'city' ILIKE $${idx} OR location->>'district' ILIKE $${idx} OR location->>'address' ILIKE $${idx})`,
-    );
-  }
-  if (minPrice !== undefined) {
-    values.push(minPrice);
-    conditions.push(`(estimated_rental_rate->>'perDay')::numeric >= $${values.length}`);
-  }
-  if (maxPrice !== undefined) {
-    values.push(maxPrice);
-    conditions.push(`(estimated_rental_rate->>'perDay')::numeric <= $${values.length}`);
+    where.OR = (where.OR || []).concat([
+      { location: { path: ["city"], string_contains: location } },
+      { location: { path: ["district"], string_contains: location } },
+      { location: { path: ["address"], string_contains: location } },
+    ]);
   }
 
-  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    where.AND = [
+      ...(minPrice !== undefined
+        ? [{ estimatedRentalRate: { path: ["perDay"], gte: minPrice } }]
+        : []),
+      ...(maxPrice !== undefined
+        ? [{ estimatedRentalRate: { path: ["perDay"], lte: maxPrice } }]
+        : []),
+    ];
+  }
 
-  const sortColumn =
-    sortBy === "estimatedRentalRate.perDay"
-      ? "(estimated_rental_rate->>'perDay')::numeric"
-      : sortBy === "modelYear"
-        ? "model_year"
-        : "created_at";
-  const direction = sortOrder === "asc" ? "ASC" : "DESC";
+  // Prisma can't order by a path inside a Json column, so a price sort
+  // falls back to the newest-first default rather than reaching for raw SQL.
+  const orderBy =
+    sortBy === "modelYear"
+      ? { modelYear: sortOrder === "asc" ? "asc" : "desc" }
+      : { createdAt: sortOrder === "asc" ? "asc" : "desc" };
 
-  const offset = (page - 1) * limit;
-  values.push(limit, offset);
-
-  const [{ rows }, countResult] = await Promise.all([
-    query(
-      `SELECT ${COLUMNS} FROM vehicles ${where}
-       ORDER BY ${sortColumn} ${direction} LIMIT $${values.length - 1} OFFSET $${values.length}`,
-      values,
-    ),
-    query(`SELECT COUNT(*)::int AS total FROM vehicles ${where}`, values.slice(0, -2)),
+  const [vehicles, total] = await Promise.all([
+    prisma.vehicle.findMany({
+      where,
+      select: SELECT,
+      orderBy,
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.vehicle.count({ where }),
   ]);
 
-  return { vehicles: rows.map(mapVehicle), total: countResult.rows[0].total };
+  return { vehicles: vehicles.map(mapVehicle), total };
 };
 
 const findPubliclyVisibleById = async (id) => {
-  const { rows } = await query(
-    `SELECT ${COLUMNS} FROM vehicles WHERE id = $1 AND availability_status = ANY($2)`,
-    [id, PUBLICLY_VISIBLE_STATUSES],
-  );
-  return mapVehicle(rows[0]);
+  const vehicle = await prisma.vehicle.findFirst({
+    where: { id, availabilityStatus: { in: PUBLICLY_VISIBLE_STATUSES } },
+    select: SELECT,
+  });
+  return mapVehicle(vehicle);
 };
 
 const findById = async (id) => {
-  const { rows } = await query(`SELECT ${COLUMNS} FROM vehicles WHERE id = $1`, [id]);
-  return mapVehicle(rows[0]);
+  const vehicle = await prisma.vehicle.findUnique({ where: { id }, select: SELECT });
+  return mapVehicle(vehicle);
 };
 
-const findByRegistrationNumber = async (registrationNumber, excludeId) => {
-  const { rows } = await query(
-    `SELECT id FROM vehicles WHERE registration_number = $1 AND ($2::uuid IS NULL OR id <> $2)`,
-    [registrationNumber, excludeId || null],
-  );
-  return rows[0] || null;
-};
+const findByRegistrationNumber = async (registrationNumber, excludeId) =>
+  prisma.vehicle.findFirst({
+    where: { registrationNumber, ...(excludeId ? { id: { not: excludeId } } : {}) },
+    select: { id: true },
+  });
 
 const create = async (payload, userId) => {
-  const { rows } = await query(
-    `INSERT INTO vehicles (
-       vehicle_name, brand, vehicle_model, category_id, vehicle_type, images,
-       registration_number, model_year, seating_capacity, fuel_type, transmission,
-       is_ac, features, color, location, estimated_rental_rate, availability_status,
-       driver_required, owner_info, documents, created_by
-     ) VALUES (
-       $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21
-     ) RETURNING ${COLUMNS}`,
-    [
-      payload.vehicleName,
-      payload.brand,
-      payload.vehicleModel,
-      payload.categoryId || null,
-      payload.vehicleType,
-      payload.images || [],
-      payload.registrationNumber,
-      payload.modelYear,
-      payload.seatingCapacity,
-      payload.fuelType,
-      payload.transmission,
-      payload.isAC ?? true,
-      payload.features || [],
-      payload.color || null,
-      payload.location ? JSON.stringify(payload.location) : null,
-      payload.estimatedRentalRate ? JSON.stringify(payload.estimatedRentalRate) : null,
-      payload.availabilityStatus || "pending",
-      payload.driverRequired ?? false,
-      payload.ownerInfo ? JSON.stringify(payload.ownerInfo) : null,
-      JSON.stringify(payload.documents || []),
-      userId,
-    ],
-  );
+  const vehicle = await prisma.vehicle.create({
+    data: {
+      vehicleName: payload.vehicleName,
+      brand: payload.brand,
+      vehicleModel: payload.vehicleModel,
+      categoryId: payload.categoryId || null,
+      vehicleType: payload.vehicleType,
+      images: payload.images || [],
+      registrationNumber: payload.registrationNumber,
+      modelYear: payload.modelYear,
+      seatingCapacity: payload.seatingCapacity,
+      fuelType: payload.fuelType,
+      transmission: payload.transmission,
+      isAC: payload.isAC ?? true,
+      features: payload.features || [],
+      color: payload.color || null,
+      location: payload.location ?? null,
+      estimatedRentalRate: payload.estimatedRentalRate ?? null,
+      availabilityStatus: toAvailabilityEnum(payload.availabilityStatus) || "pending",
+      driverRequired: payload.driverRequired ?? false,
+      ownerInfo: payload.ownerInfo ?? null,
+      documents: payload.documents || [],
+      createdById: userId,
+    },
+    select: SELECT,
+  });
 
-  return mapVehicle(rows[0]);
+  return mapVehicle(vehicle);
 };
 
-const COLUMN_MAP = {
-  vehicleName: "vehicle_name",
+// Only whitelisted camelCase keys are ever written — everything here already
+// matches the Prisma field name 1:1 except `updatedBy` -> `updatedById`.
+const FIELD_MAP = {
+  vehicleName: "vehicleName",
   brand: "brand",
-  vehicleModel: "vehicle_model",
-  categoryId: "category_id",
-  vehicleType: "vehicle_type",
+  vehicleModel: "vehicleModel",
+  categoryId: "categoryId",
+  vehicleType: "vehicleType",
   images: "images",
-  registrationNumber: "registration_number",
-  modelYear: "model_year",
-  seatingCapacity: "seating_capacity",
-  fuelType: "fuel_type",
+  registrationNumber: "registrationNumber",
+  modelYear: "modelYear",
+  seatingCapacity: "seatingCapacity",
+  fuelType: "fuelType",
   transmission: "transmission",
-  isAC: "is_ac",
+  isAC: "isAC",
   features: "features",
   color: "color",
   location: "location",
-  estimatedRentalRate: "estimated_rental_rate",
-  availabilityStatus: "availability_status",
-  driverRequired: "driver_required",
-  ownerInfo: "owner_info",
+  estimatedRentalRate: "estimatedRentalRate",
+  availabilityStatus: "availabilityStatus",
+  driverRequired: "driverRequired",
+  ownerInfo: "ownerInfo",
   documents: "documents",
-  updatedBy: "updated_by",
+  updatedBy: "updatedById",
 };
 
-const JSON_COLUMNS = new Set(["location", "estimated_rental_rate", "owner_info", "documents"]);
-
 const updateById = async (id, payload) => {
-  const entries = Object.entries(payload).filter(([key]) => COLUMN_MAP[key] !== undefined);
-  if (!entries.length) return findById(id);
+  const data = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (FIELD_MAP[key] === undefined) continue;
+    data[FIELD_MAP[key]] = key === "availabilityStatus" ? toAvailabilityEnum(value) : value;
+  }
+  if (!Object.keys(data).length) return findById(id);
 
-  const setClauses = entries.map(([key], idx) => `${COLUMN_MAP[key]} = $${idx + 2}`);
-  const values = entries.map(([key, value]) =>
-    JSON_COLUMNS.has(COLUMN_MAP[key]) ? JSON.stringify(value) : value,
-  );
-
-  const { rows } = await query(
-    `UPDATE vehicles SET ${setClauses.join(", ")}, updated_at = now()
-     WHERE id = $1 RETURNING ${COLUMNS}`,
-    [id, ...values],
-  );
-
-  return mapVehicle(rows[0]);
+  try {
+    const vehicle = await prisma.vehicle.update({ where: { id }, data, select: SELECT });
+    return mapVehicle(vehicle);
+  } catch (error) {
+    if (error.code === "P2025") return null; // record not found
+    throw error;
+  }
 };
 
 const deleteById = async (id) => {
-  const { rows } = await query(`DELETE FROM vehicles WHERE id = $1 RETURNING id`, [id]);
-  return rows[0] || null;
+  try {
+    return await prisma.vehicle.delete({ where: { id }, select: { id: true } });
+  } catch (error) {
+    if (error.code === "P2025") return null; // record not found
+    throw error;
+  }
 };
 
 export default {
