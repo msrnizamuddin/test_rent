@@ -1,5 +1,4 @@
 import Payment from "../model/payment.model.js";
-import { query } from "../../../../config/db.js";
 
 const buildError = (message, statusCode = 400) => {
   const err = new Error(message);
@@ -7,34 +6,10 @@ const buildError = (message, statusCode = 400) => {
   return err;
 };
 
-// Trips table belongs to another module — read directly, no cross-module import.
-const findTripById = async (tripId) => {
-  const { rows } = await query(
-    `SELECT id, customer_id, driver_id, final_rent, payment_status FROM trips WHERE id = $1`,
-    [tripId],
-  );
-  return rows[0] || null;
-};
-
-const syncTripPaymentStatus = async (tripId) => {
-  const trip = await findTripById(tripId);
-  if (!trip) return;
-
-  const paidTotal = await Payment.sumPaidByTripId(tripId);
-  const finalRent = Number(trip.final_rent || 0);
-
-  let paymentStatus = "partial";
-  if (finalRent > 0 && paidTotal >= finalRent) {
-    paymentStatus = "paid";
-  } else if (paidTotal <= 0) {
-    paymentStatus = "pending";
-  }
-
-  await query(`UPDATE trips SET payment_status = $2, updated_at = now() WHERE id = $1`, [
-    tripId,
-    paymentStatus,
-  ]);
-};
+// Trips table belongs to another module — the model reads/writes it directly
+// via Prisma, no cross-module import.
+const findTripById = Payment.findTripById;
+const syncTripPaymentStatus = Payment.syncTripPaymentStatus;
 
 // ---------------- POST / — record a payment ----------------
 const recordPayment = async (payload, currentUser) => {
@@ -43,11 +18,11 @@ const recordPayment = async (payload, currentUser) => {
 
   const isStaff = currentUser.role === "superadmin" || currentUser.role === "manager";
 
-  if (currentUser.role === "customer" && trip.customer_id !== currentUser.id) {
+  if (currentUser.role === "customer" && trip.customerId !== currentUser.id) {
     throw buildError("You can only pay for your own trip", 403);
   }
 
-  const customerId = isStaff ? trip.customer_id : currentUser.id;
+  const customerId = isStaff ? trip.customerId : currentUser.id;
 
   let status = "pending";
   if (payload.status === "paid") {
@@ -99,8 +74,8 @@ const getPaymentsByTrip = async (tripId, currentUser) => {
   if (!trip) throw buildError("Trip not found", 404);
 
   const isStaff = currentUser.role === "superadmin" || currentUser.role === "manager";
-  const isTripDriver = currentUser.role === "driver" && trip.driver_id === currentUser.id;
-  const isTripCustomer = currentUser.role === "customer" && trip.customer_id === currentUser.id;
+  const isTripDriver = currentUser.role === "driver" && trip.driverId === currentUser.id;
+  const isTripCustomer = currentUser.role === "customer" && trip.customerId === currentUser.id;
 
   if (!isStaff && !isTripDriver && !isTripCustomer) {
     throw buildError("Access denied", 403);

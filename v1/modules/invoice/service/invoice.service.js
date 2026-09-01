@@ -1,5 +1,4 @@
 import Invoice from "../model/invoice.model.js";
-import { query } from "../../../../config/db.js";
 
 const buildError = (message, statusCode = 400) => {
   const err = new Error(message);
@@ -7,21 +6,10 @@ const buildError = (message, statusCode = 400) => {
   return err;
 };
 
-// Trips/payments belong to other modules — read directly, no cross-module import.
-const findTripById = async (tripId) => {
-  const { rows } = await query(`SELECT id, customer_id, status FROM trips WHERE id = $1`, [
-    tripId,
-  ]);
-  return rows[0] || null;
-};
-
-const sumPaidPaymentsForTrip = async (tripId) => {
-  const { rows } = await query(
-    `SELECT COALESCE(SUM(amount), 0)::numeric AS total FROM payments WHERE trip_id = $1 AND status = 'paid'`,
-    [tripId],
-  );
-  return Number(rows[0].total);
-};
+// Trips/payments belong to other modules — the model reads them directly via
+// Prisma, no cross-module import.
+const findTripById = Invoice.findTripById;
+const sumPaidPaymentsForTrip = Invoice.sumPaidPaymentsForTrip;
 
 const generateInvoiceNumber = () => {
   const now = new Date();
@@ -78,7 +66,7 @@ const generateInvoice = async (payload) => {
       paymentStatus,
     });
   } catch (error) {
-    if (error.code === "23505") {
+    if (error.code === "P2002") {
       // unique_violation — retry once with a fresh number
       invoiceNumber = generateInvoiceNumber();
       return Invoice.create({
@@ -104,7 +92,7 @@ const assertTripAccess = async (tripId, currentUser) => {
 
   const trip = await findTripById(tripId);
   if (!trip) throw buildError("Trip not found", 404);
-  if (currentUser.role === "customer" && trip.customer_id === currentUser.id) return;
+  if (currentUser.role === "customer" && trip.customerId === currentUser.id) return;
 
   throw buildError("Access denied", 403);
 };

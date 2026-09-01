@@ -1,127 +1,111 @@
-import { query } from "../../../../config/db.js";
+import { prisma } from "../../../../config/db.js";
 
 const mapNotification = (row) => {
   if (!row) return null;
   return {
     id: row.id,
-    userId: row.user_id,
+    userId: row.userId,
     title: row.title,
     message: row.message,
     type: row.type,
     channel: row.channel,
-    isRead: row.is_read,
+    isRead: row.isRead,
     metadata: row.metadata,
-    createdAt: row.created_at,
+    createdAt: row.createdAt,
   };
 };
 
-const COLUMNS = `
-  id, user_id, title, message, type, channel, is_read, metadata, created_at
-`;
+const SELECT = {
+  id: true,
+  userId: true,
+  title: true,
+  message: true,
+  type: true,
+  channel: true,
+  isRead: true,
+  metadata: true,
+  createdAt: true,
+};
 
 // Reusable helper other modules can import to push a notification
 // (e.g. "Vehicle Assigned", "Trip Started").
 const create = async ({ userId, title, message, type, channel, metadata }) => {
-  const { rows } = await query(
-    `INSERT INTO notifications (user_id, title, message, type, channel, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING ${COLUMNS}`,
-    [
+  const notification = await prisma.notification.create({
+    data: {
       userId,
       title,
       message,
-      type || null,
-      channel || "in_app",
-      metadata ? JSON.stringify(metadata) : null,
-    ],
-  );
+      type: type || null,
+      channel: channel || "in_app",
+      metadata: metadata ?? null,
+    },
+    select: SELECT,
+  });
 
   // TODO: dispatch via SMS/email/push provider once wired up, based on `channel`
 
-  return mapNotification(rows[0]);
+  return mapNotification(notification);
 };
 
 const findById = async (id) => {
-  const { rows } = await query(`SELECT ${COLUMNS} FROM notifications WHERE id = $1`, [id]);
-  return mapNotification(rows[0]);
+  const notification = await prisma.notification.findUnique({ where: { id }, select: SELECT });
+  return mapNotification(notification);
 };
 
 const findForUser = async ({ userId, isRead, page, limit }) => {
-  const conditions = ["user_id = $1"];
-  const values = [userId];
+  const where = { userId, ...(typeof isRead === "boolean" ? { isRead } : {}) };
 
-  if (typeof isRead === "boolean") {
-    values.push(isRead);
-    conditions.push(`is_read = $${values.length}`);
-  }
-
-  const where = `WHERE ${conditions.join(" AND ")}`;
-  const offset = (page - 1) * limit;
-  values.push(limit, offset);
-
-  const [{ rows }, countResult] = await Promise.all([
-    query(
-      `SELECT ${COLUMNS} FROM notifications ${where}
-       ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
-      values,
-    ),
-    query(`SELECT COUNT(*)::int AS total FROM notifications ${where}`, values.slice(0, -2)),
+  const [notifications, total] = await Promise.all([
+    prisma.notification.findMany({
+      where,
+      select: SELECT,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.notification.count({ where }),
   ]);
 
-  return { notifications: rows.map(mapNotification), total: countResult.rows[0].total };
+  return { notifications: notifications.map(mapNotification), total };
 };
 
 const findAll = async ({ userId, channel, page, limit }) => {
-  const conditions = [];
-  const values = [];
+  const where = { ...(userId ? { userId } : {}), ...(channel ? { channel } : {}) };
 
-  if (userId) {
-    values.push(userId);
-    conditions.push(`user_id = $${values.length}`);
-  }
-  if (channel) {
-    values.push(channel);
-    conditions.push(`channel = $${values.length}`);
-  }
-
-  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  const offset = (page - 1) * limit;
-  values.push(limit, offset);
-
-  const [{ rows }, countResult] = await Promise.all([
-    query(
-      `SELECT ${COLUMNS} FROM notifications ${where}
-       ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
-      values,
-    ),
-    query(`SELECT COUNT(*)::int AS total FROM notifications ${where}`, values.slice(0, -2)),
+  const [notifications, total] = await Promise.all([
+    prisma.notification.findMany({
+      where,
+      select: SELECT,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.notification.count({ where }),
   ]);
 
-  return { notifications: rows.map(mapNotification), total: countResult.rows[0].total };
+  return { notifications: notifications.map(mapNotification), total };
 };
 
 const markReadForUser = async (id, userId) => {
-  const { rows } = await query(
-    `UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2 RETURNING ${COLUMNS}`,
-    [id, userId],
-  );
-  return mapNotification(rows[0]);
+  const { count } = await prisma.notification.updateMany({
+    where: { id, userId },
+    data: { isRead: true },
+  });
+  if (count === 0) return null;
+  return findById(id);
 };
 
 const markAllReadForUser = async (userId) => {
-  const { rowCount } = await query(
-    `UPDATE notifications SET is_read = true WHERE user_id = $1 AND is_read = false`,
-    [userId],
-  );
-  return { updated: rowCount };
+  const { count } = await prisma.notification.updateMany({
+    where: { userId, isRead: false },
+    data: { isRead: true },
+  });
+  return { updated: count };
 };
 
 const deleteForUser = async (id, userId) => {
-  const { rows } = await query(
-    `DELETE FROM notifications WHERE id = $1 AND user_id = $2 RETURNING id`,
-    [id, userId],
-  );
-  return rows[0] || null;
+  const { count } = await prisma.notification.deleteMany({ where: { id, userId } });
+  return count > 0 ? { id } : null;
 };
 
 export default {

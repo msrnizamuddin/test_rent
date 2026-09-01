@@ -6,8 +6,9 @@ for Super Admin/Manager, and mobile apps for Customers and Drivers.
 ## Stack
 
 - **Runtime**: Node.js, Express 5, ESM (`"type": "module"`)
-- **Database**: PostgreSQL, accessed via raw parameterized SQL through `pg`
-  (no ORM). See `config/db.js` for the pool/query helper.
+- **Database**: PostgreSQL via [Prisma ORM](https://www.prisma.io/) (`prisma`/`@prisma/client`,
+  pinned to 6.x). See `prisma/schema.prisma` for the full data model and
+  `config/db.js` for the shared `PrismaClient` singleton.
 - **Auth**: JWT (`jsonwebtoken`), passwords hashed with `bcryptjs`
 - **Validation**: Joi
 
@@ -16,8 +17,14 @@ for Super Admin/Manager, and mobile apps for Customers and Drivers.
 1. Copy `.env.example` to `.env` and set `DATABASE_URL` to your Postgres
    connection string, plus `JWT_SECRET` (and `SETUP_SECRET` for the one-time
    superadmin bootstrap endpoint).
-2. Apply the schema: `npm run migrate` (runs `database/schema.sql`).
+2. Apply the schema: `npm run migrate` (runs `prisma migrate deploy`). Use
+   `npm run migrate:dev` instead during local development if you're changing
+   `prisma/schema.prisma` and want a new migration generated.
 3. `npm run dev` to start the server with nodemon.
+
+`npm install` also regenerates the Prisma Client automatically (`postinstall`
+runs `prisma generate`); run `npm run prisma:generate` manually after pulling
+schema changes without a fresh `npm install`.
 
 ## Module structure
 
@@ -25,13 +32,22 @@ Every module under `v1/modules/<name>/` follows the same layout:
 
 ```
 v1/modules/<name>/
-  model/<name>.model.js       raw SQL queries against Postgres, snake_case ↔ camelCase mapping
+  model/<name>.model.js       Prisma Client queries, reshaping the odd field here and there
   service/<name>.service.js   business logic, throws { statusCode, message } errors
   controller/<name>.controller.js  thin req/res wrapper around the service
   validation/<name>.validation.js  Joi schemas
   route/<name>.route.js       the actual endpoint definitions
   route/index.js              mounts the same router under both /web and /app
 ```
+
+Prisma field names are already camelCase and `@map()`'d to the underlying
+snake_case columns, so most model functions pass data straight through. A
+few enums whose original text values contained hyphens (`on-trip`,
+`reset-password`, `change-mobile` — not valid Prisma enum identifiers) are
+declared with underscored member names and mapped back to the hyphenated
+value on disk; the `auth` and `vehicle` models each carry small bidirectional
+converters so the public API keeps returning the original hyphenated
+strings despite that.
 
 `route.js` at the project root auto-discovers every `v1/modules/<name>/route/index.js`
 and mounts it at `/api/v1/<name>` — no manual wiring needed when adding a module.

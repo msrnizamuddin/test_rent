@@ -151,7 +151,7 @@ model Vehicle {
   brand               String
   vehicleModel        String                    @map("vehicle_model")
   categoryId          String?                   @map("category_id") @db.Uuid
-  category            VehicleCategory?          @relation(fields: [categoryId], references: [id])
+  category            VehicleCategory?          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   vehicleType         VehicleType               @map("vehicle_type")
   images              String[]                  @default([])
   registrationNumber  String                    @unique @map("registration_number")

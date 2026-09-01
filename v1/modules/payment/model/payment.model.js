@@ -1,128 +1,135 @@
-import { query } from "../../../../config/db.js";
+import { prisma } from "../../../../config/db.js";
 
-const mapPayment = (row) => {
-  if (!row) return null;
-  return {
-    id: row.id,
-    tripId: row.trip_id,
-    customerId: row.customer_id,
-    amount: row.amount,
-    paymentType: row.payment_type,
-    method: row.method,
-    status: row.status,
-    transactionId: row.transaction_id,
-    paidAt: row.paid_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+// Prisma's generated field names already match our camelCase API shape (see
+// prisma/schema.prisma — every column is @map()'d from snake_case), so
+// payment rows need no reshaping before being returned to callers.
+const mapPayment = (row) => row;
+
+const SELECT = {
+  id: true,
+  tripId: true,
+  customerId: true,
+  amount: true,
+  paymentType: true,
+  method: true,
+  status: true,
+  transactionId: true,
+  paidAt: true,
+  createdAt: true,
+  updatedAt: true,
 };
 
-const COLUMNS = `
-  id, trip_id, customer_id, amount, payment_type, method, status,
-  transaction_id, paid_at, created_at, updated_at
-`;
-
 const create = async (payload) => {
-  const { rows } = await query(
-    `INSERT INTO payments (
-       trip_id, customer_id, amount, payment_type, method, status,
-       transaction_id, paid_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-     RETURNING ${COLUMNS}`,
-    [
-      payload.tripId,
-      payload.customerId,
-      payload.amount,
-      payload.paymentType,
-      payload.method,
-      payload.status || "pending",
-      payload.transactionId || null,
-      payload.status === "paid" ? new Date() : null,
-    ],
-  );
-  return mapPayment(rows[0]);
+  const payment = await prisma.payment.create({
+    data: {
+      tripId: payload.tripId,
+      customerId: payload.customerId,
+      amount: payload.amount,
+      paymentType: payload.paymentType,
+      method: payload.method,
+      status: payload.status || "pending",
+      transactionId: payload.transactionId || null,
+      paidAt: payload.status === "paid" ? new Date() : null,
+    },
+    select: SELECT,
+  });
+  return mapPayment(payment);
 };
 
 const findById = async (id) => {
-  const { rows } = await query(`SELECT ${COLUMNS} FROM payments WHERE id = $1`, [id]);
-  return mapPayment(rows[0]);
+  const payment = await prisma.payment.findUnique({ where: { id }, select: SELECT });
+  return mapPayment(payment);
 };
 
 const findByTripId = async (tripId) => {
-  const { rows } = await query(
-    `SELECT ${COLUMNS} FROM payments WHERE trip_id = $1 ORDER BY created_at DESC`,
-    [tripId],
-  );
-  return rows.map(mapPayment);
+  const payments = await prisma.payment.findMany({
+    where: { tripId },
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+  return payments.map(mapPayment);
 };
 
 const findByCustomerId = async (customerId) => {
-  const { rows } = await query(
-    `SELECT ${COLUMNS} FROM payments WHERE customer_id = $1 ORDER BY created_at DESC`,
-    [customerId],
-  );
-  return rows.map(mapPayment);
+  const payments = await prisma.payment.findMany({
+    where: { customerId },
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+  return payments.map(mapPayment);
 };
 
 const search = async ({ status, method, customerId, page, limit }) => {
-  const conditions = [];
-  const values = [];
+  const where = {};
+  if (status) where.status = status;
+  if (method) where.method = method;
+  if (customerId) where.customerId = customerId;
 
-  if (status) {
-    values.push(status);
-    conditions.push(`status = $${values.length}`);
-  }
-  if (method) {
-    values.push(method);
-    conditions.push(`method = $${values.length}`);
-  }
-  if (customerId) {
-    values.push(customerId);
-    conditions.push(`customer_id = $${values.length}`);
-  }
-
-  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  const offset = (page - 1) * limit;
-  values.push(limit, offset);
-
-  const [{ rows }, countResult] = await Promise.all([
-    query(
-      `SELECT ${COLUMNS} FROM payments ${where}
-       ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
-      values,
-    ),
-    query(`SELECT COUNT(*)::int AS total FROM payments ${where}`, values.slice(0, -2)),
+  const [payments, total] = await Promise.all([
+    prisma.payment.findMany({
+      where,
+      select: SELECT,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.payment.count({ where }),
   ]);
 
-  return { payments: rows.map(mapPayment), total: countResult.rows[0].total };
+  return { payments: payments.map(mapPayment), total };
 };
 
 const updateStatus = async (id, { status, transactionId }) => {
-  const setClauses = ["status = $2"];
-  const values = [id, status];
+  const data = { status };
+  if (transactionId !== undefined) data.transactionId = transactionId;
+  if (status === "paid") data.paidAt = new Date();
 
-  if (transactionId !== undefined) {
-    values.push(transactionId);
-    setClauses.push(`transaction_id = $${values.length}`);
+  try {
+    const payment = await prisma.payment.update({ where: { id }, data, select: SELECT });
+    return mapPayment(payment);
+  } catch (error) {
+    if (error.code === "P2025") return null; // record not found
+    throw error;
   }
-  if (status === "paid") {
-    setClauses.push(`paid_at = now()`);
-  }
-
-  const { rows } = await query(
-    `UPDATE payments SET ${setClauses.join(", ")}, updated_at = now()
-     WHERE id = $1 RETURNING ${COLUMNS}`,
-    values,
-  );
-  return mapPayment(rows[0]);
 };
 
+// Sum of all `paid` payments for a trip. Payment.amount is a Prisma Decimal —
+// aggregate's _sum comes back as a Decimal (or null when there are no rows),
+// so it must go through .toNumber() rather than a naive numeric comparison.
 const sumPaidByTripId = async (tripId) => {
-  const { rows } = await query(
-    `SELECT COALESCE(SUM(amount), 0)::numeric AS total FROM payments WHERE trip_id = $1 AND status = 'paid'`,
-    [tripId],
-  );
-  return Number(rows[0].total);
+  const agg = await prisma.payment.aggregate({
+    _sum: { amount: true },
+    where: { tripId, status: "paid" },
+  });
+  return agg._sum.amount ? agg._sum.amount.toNumber() : 0;
+};
+
+// Trips table belongs to another module — read/write it directly via Prisma
+// rather than importing the trip module (same approach the raw-SQL version used).
+const findTripById = async (tripId) =>
+  prisma.trip.findUnique({
+    where: { id: tripId },
+    select: { id: true, customerId: true, driverId: true, finalRent: true, paymentStatus: true },
+  });
+
+const syncTripPaymentStatus = async (tripId) => {
+  const trip = await findTripById(tripId);
+  if (!trip) return;
+
+  const paidTotal = await sumPaidByTripId(tripId);
+  // finalRent is also a Decimal — convert before comparing against the
+  // (already-numeric) paidTotal so this never falls back to Decimal object
+  // identity/string comparison.
+  const finalRent = trip.finalRent ? trip.finalRent.toNumber() : 0;
+
+  let paymentStatus = "partial";
+  if (finalRent > 0 && paidTotal >= finalRent) {
+    paymentStatus = "paid";
+  } else if (paidTotal <= 0) {
+    paymentStatus = "pending";
+  }
+
+  await prisma.trip.update({ where: { id: tripId }, data: { paymentStatus } });
 };
 
 export default {
@@ -133,4 +140,6 @@ export default {
   search,
   updateStatus,
   sumPaidByTripId,
+  findTripById,
+  syncTripPaymentStatus,
 };

@@ -1,117 +1,127 @@
-import { query } from "../../../../config/db.js";
+import { prisma } from "../../../../config/db.js";
 
+// Prisma's generated field names already match our camelCase API shape (see
+// prisma/schema.prisma — every column is @map()'d from snake_case). The only
+// reshaping kept from the raw-SQL version is surfacing a `trip` sub-object
+// when the row was fetched with the trip relation joined in (GET /mine).
 const mapInvoice = (row) => {
   if (!row) return null;
+  const { trip, ...rest } = row;
   return {
-    id: row.id,
-    tripId: row.trip_id,
-    invoiceNumber: row.invoice_number,
-    rentalCharge: row.rental_charge,
-    driverCharge: row.driver_charge,
-    additionalCharges: row.additional_charges,
-    tax: row.tax,
-    discount: row.discount,
-    total: row.total,
-    paidAmount: row.paid_amount,
-    dueAmount: row.due_amount,
-    paymentStatus: row.payment_status,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    // populated only by joined queries (GET /mine)
-    trip: row.trip_customer_id
+    ...rest,
+    ...(trip !== undefined
       ? {
-          id: row.trip_id,
-          customerId: row.trip_customer_id,
-          pickupDate: row.trip_pickup_date,
-          returnDate: row.trip_return_date,
-          status: row.trip_status,
+          trip: trip
+            ? {
+                id: rest.tripId,
+                customerId: trip.customerId,
+                pickupDate: trip.pickupDate,
+                returnDate: trip.returnDate,
+                status: trip.status,
+              }
+            : undefined,
         }
-      : undefined,
+      : {}),
   };
 };
 
-const COLUMNS = `
-  id, trip_id, invoice_number, rental_charge, driver_charge, additional_charges,
-  tax, discount, total, paid_amount, due_amount, payment_status, created_at, updated_at
-`;
+const SELECT = {
+  id: true,
+  tripId: true,
+  invoiceNumber: true,
+  rentalCharge: true,
+  driverCharge: true,
+  additionalCharges: true,
+  tax: true,
+  discount: true,
+  total: true,
+  paidAmount: true,
+  dueAmount: true,
+  paymentStatus: true,
+  createdAt: true,
+  updatedAt: true,
+};
 
 const create = async (payload) => {
-  const { rows } = await query(
-    `INSERT INTO invoices (
-       trip_id, invoice_number, rental_charge, driver_charge, additional_charges,
-       tax, discount, total, paid_amount, due_amount, payment_status
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-     RETURNING ${COLUMNS}`,
-    [
-      payload.tripId,
-      payload.invoiceNumber,
-      payload.rentalCharge,
-      payload.driverCharge,
-      payload.additionalCharges,
-      payload.tax,
-      payload.discount,
-      payload.total,
-      payload.paidAmount,
-      payload.dueAmount,
-      payload.paymentStatus,
-    ],
-  );
-  return mapInvoice(rows[0]);
+  const invoice = await prisma.invoice.create({
+    data: {
+      tripId: payload.tripId,
+      invoiceNumber: payload.invoiceNumber,
+      rentalCharge: payload.rentalCharge,
+      driverCharge: payload.driverCharge,
+      additionalCharges: payload.additionalCharges,
+      tax: payload.tax,
+      discount: payload.discount,
+      total: payload.total,
+      paidAmount: payload.paidAmount,
+      dueAmount: payload.dueAmount,
+      paymentStatus: payload.paymentStatus,
+    },
+    select: SELECT,
+  });
+  return mapInvoice(invoice);
 };
 
-const findByInvoiceNumber = async (invoiceNumber) => {
-  const { rows } = await query(`SELECT id FROM invoices WHERE invoice_number = $1`, [
-    invoiceNumber,
-  ]);
-  return rows[0] || null;
-};
+const findByInvoiceNumber = async (invoiceNumber) =>
+  prisma.invoice.findUnique({ where: { invoiceNumber }, select: { id: true } });
 
 const findByTripId = async (tripId) => {
-  const { rows } = await query(`SELECT ${COLUMNS} FROM invoices WHERE trip_id = $1`, [tripId]);
-  return mapInvoice(rows[0]);
+  const invoice = await prisma.invoice.findUnique({ where: { tripId }, select: SELECT });
+  return mapInvoice(invoice);
 };
 
 const findById = async (id) => {
-  const { rows } = await query(`SELECT ${COLUMNS} FROM invoices WHERE id = $1`, [id]);
-  return mapInvoice(rows[0]);
+  const invoice = await prisma.invoice.findUnique({ where: { id }, select: SELECT });
+  return mapInvoice(invoice);
 };
 
 const findByCustomerId = async (customerId) => {
-  const { rows } = await query(
-    `SELECT i.*, t.customer_id AS trip_customer_id, t.pickup_date AS trip_pickup_date,
-            t.return_date AS trip_return_date, t.status AS trip_status
-     FROM invoices i
-     JOIN trips t ON t.id = i.trip_id
-     WHERE t.customer_id = $1
-     ORDER BY i.created_at DESC`,
-    [customerId],
-  );
-  return rows.map(mapInvoice);
+  const invoices = await prisma.invoice.findMany({
+    where: { trip: { customerId } },
+    select: {
+      ...SELECT,
+      trip: { select: { customerId: true, pickupDate: true, returnDate: true, status: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return invoices.map(mapInvoice);
 };
 
 const search = async ({ paymentStatus, page, limit }) => {
-  const conditions = [];
-  const values = [];
+  const where = {};
+  if (paymentStatus) where.paymentStatus = paymentStatus;
 
-  if (paymentStatus) {
-    values.push(paymentStatus);
-    conditions.push(`payment_status = $${values.length}`);
-  }
-
-  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  const offset = (page - 1) * limit;
-  values.push(limit, offset);
-
-  const [{ rows }, countResult] = await Promise.all([
-    query(
-      `SELECT ${COLUMNS} FROM invoices ${where}
-       ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
-      values,
-    ),
-    query(`SELECT COUNT(*)::int AS total FROM invoices ${where}`, values.slice(0, -2)),
+  const [invoices, total] = await Promise.all([
+    prisma.invoice.findMany({
+      where,
+      select: SELECT,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.invoice.count({ where }),
   ]);
 
-  return { invoices: rows.map(mapInvoice), total: countResult.rows[0].total };
+  return { invoices: invoices.map(mapInvoice), total };
+};
+
+// Trips table belongs to another module — read it directly via Prisma rather
+// than importing the trip module (same approach the raw-SQL version used).
+const findTripById = async (tripId) =>
+  prisma.trip.findUnique({
+    where: { id: tripId },
+    select: { id: true, customerId: true, status: true },
+  });
+
+// Sum of all `paid` payments for a trip. Payment.amount is a Prisma Decimal —
+// aggregate's _sum comes back as a Decimal (or null when there are no rows),
+// so it must go through .toNumber() rather than a naive numeric comparison.
+const sumPaidPaymentsForTrip = async (tripId) => {
+  const agg = await prisma.payment.aggregate({
+    _sum: { amount: true },
+    where: { tripId, status: "paid" },
+  });
+  return agg._sum.amount ? agg._sum.amount.toNumber() : 0;
 };
 
 export default {
@@ -121,4 +131,6 @@ export default {
   findById,
   findByCustomerId,
   search,
+  findTripById,
+  sumPaidPaymentsForTrip,
 };

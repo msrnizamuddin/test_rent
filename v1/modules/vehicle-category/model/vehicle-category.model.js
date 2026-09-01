@@ -1,69 +1,62 @@
-import { query } from "../../../../config/db.js";
+import { prisma } from "../../../../config/db.js";
 
+// Prisma's generated field names already match our camelCase API shape
+// (see prisma/schema.prisma — every column is @map()'d from snake_case),
+// so mapCategory is a straight passthrough.
 const mapCategory = (row) => {
   if (!row) return null;
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    image: row.image,
-    status: row.status,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+  return { ...row };
 };
 
-const COLUMNS = `id, name, description, image, status, created_at, updated_at`;
+const SELECT = {
+  id: true,
+  name: true,
+  description: true,
+  image: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+};
 
 const search = async ({ status }) => {
-  const conditions = [];
-  const values = [];
+  const where = {};
+  if (status) where.status = status;
 
-  if (status) {
-    values.push(status);
-    conditions.push(`status = $${values.length}`);
-  }
+  const categories = await prisma.vehicleCategory.findMany({
+    where,
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
 
-  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-
-  const { rows } = await query(
-    `SELECT ${COLUMNS} FROM vehicle_categories ${where} ORDER BY created_at DESC`,
-    values,
-  );
-
-  return rows.map(mapCategory);
+  return categories.map(mapCategory);
 };
 
 const findById = async (id) => {
-  const { rows } = await query(`SELECT ${COLUMNS} FROM vehicle_categories WHERE id = $1`, [id]);
-  return mapCategory(rows[0]);
+  const category = await prisma.vehicleCategory.findUnique({ where: { id }, select: SELECT });
+  return mapCategory(category);
 };
 
-const findByName = async (name, excludeId) => {
-  const { rows } = await query(
-    `SELECT id FROM vehicle_categories WHERE name = $1 AND ($2::uuid IS NULL OR id <> $2)`,
-    [name, excludeId || null],
-  );
-  return rows[0] || null;
-};
+const findByName = async (name, excludeId) =>
+  prisma.vehicleCategory.findFirst({
+    where: { name, ...(excludeId ? { id: { not: excludeId } } : {}) },
+    select: { id: true },
+  });
 
 const create = async (payload) => {
-  const { rows } = await query(
-    `INSERT INTO vehicle_categories (name, description, image, status)
-     VALUES ($1, $2, $3, $4)
-     RETURNING ${COLUMNS}`,
-    [
-      payload.name,
-      payload.description || null,
-      payload.image || null,
-      payload.status || "active",
-    ],
-  );
+  const category = await prisma.vehicleCategory.create({
+    data: {
+      name: payload.name,
+      description: payload.description || null,
+      image: payload.image || null,
+      status: payload.status || "active",
+    },
+    select: SELECT,
+  });
 
-  return mapCategory(rows[0]);
+  return mapCategory(category);
 };
 
-const COLUMN_MAP = {
+const FIELD_MAP = {
   name: "name",
   description: "description",
   image: "image",
@@ -71,24 +64,37 @@ const COLUMN_MAP = {
 };
 
 const updateById = async (id, payload) => {
-  const entries = Object.entries(payload).filter(([key]) => COLUMN_MAP[key] !== undefined);
-  if (!entries.length) return findById(id);
+  const data = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (FIELD_MAP[key] === undefined) continue;
+    data[FIELD_MAP[key]] = value;
+  }
+  if (!Object.keys(data).length) return findById(id);
 
-  const setClauses = entries.map(([key], idx) => `${COLUMN_MAP[key]} = $${idx + 2}`);
-  const values = entries.map(([, value]) => value);
-
-  const { rows } = await query(
-    `UPDATE vehicle_categories SET ${setClauses.join(", ")}, updated_at = now()
-     WHERE id = $1 RETURNING ${COLUMNS}`,
-    [id, ...values],
-  );
-
-  return mapCategory(rows[0]);
+  try {
+    const category = await prisma.vehicleCategory.update({ where: { id }, data, select: SELECT });
+    return mapCategory(category);
+  } catch (error) {
+    if (error.code === "P2025") return null; // record not found
+    throw error;
+  }
 };
 
 const deleteById = async (id) => {
-  const { rows } = await query(`DELETE FROM vehicle_categories WHERE id = $1 RETURNING id`, [id]);
-  return rows[0] || null;
+  try {
+    return await prisma.vehicleCategory.delete({ where: { id }, select: { id: true } });
+  } catch (error) {
+    if (error.code === "P2025") return null; // record not found
+    if (error.code === "P2003") {
+      // Foreign key violation (category still referenced by vehicles) — the
+      // service layer detects this by checking error.code === "23503", the
+      // raw-pg FK-violation code, so translate Prisma's equivalent to match.
+      const fkError = new Error("Category is in use by existing vehicles");
+      fkError.code = "23503";
+      throw fkError;
+    }
+    throw error;
+  }
 };
 
 export default {
