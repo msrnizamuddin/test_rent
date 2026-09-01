@@ -11,7 +11,8 @@
     "dev": "nodemon server.js",
     "build": "node server.js",
     "start-dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "migrate": "node database/migrate.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1088.0",
@@ -25,7 +26,7 @@
     "helmet": "^8.1.0",
     "joi": "^18.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.6.2",
+    "pg": "^8.13.1",
     "morgan": "^1.10.1",
     "multer": "^2.2.0",
     "ua-parser-js": "^2.0.10",

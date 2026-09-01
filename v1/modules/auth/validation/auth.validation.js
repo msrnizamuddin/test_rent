@@ -1,12 +1,6 @@
 import Joi from "joi";
-import mongoose from "mongoose";
 
-const objectId = (value, helpers) => {
-  if (!mongoose.Types.ObjectId.isValid(value)) {
-    return helpers.message("invalid objectId");
-  }
-  return value;
-};
+const objectId = Joi.string().guid({ version: "uuidv4" });
 
 const emailOrPhone = Joi.alternatives().try(
   Joi.string().email(),
@@ -116,7 +110,7 @@ export const createStaffValidation = Joi.object({
     otherwise: Joi.forbidden(),
   }),
 
-  createdBy: Joi.string().custom(objectId).required(),
+  createdBy: objectId.required(),
 });
 
 // One-time bootstrap: create the very first superadmin (no auth required,
@@ -173,12 +167,12 @@ export const otpVerificationValidation = Joi.object({
 });
 
 export const accountActivationValidation = Joi.object({
-  userId: Joi.string().custom(objectId).required(),
+  userId: objectId.required(),
   verificationToken: Joi.string().required(),
 });
 
 export const accountDeactivationValidation = Joi.object({
-  userId: Joi.string().custom(objectId).required(),
+  userId: objectId.required(),
   reason: Joi.string().trim().optional(),
 });
 
@@ -215,7 +209,7 @@ export const updateAccountControlValidation = Joi.object({
     "suspended",
     "inactive",
   ),
-  updatedBy: Joi.string().custom(objectId).required(),
+  updatedBy: objectId.required(),
 }).min(2); // at least the field being changed + updatedBy
 
 export const updateProfilePictureValidation = Joi.object({

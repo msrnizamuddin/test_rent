@@ -8,33 +8,23 @@ const buildError = (message, statusCode = 400) => {
   return err;
 };
 
-const findByEmailOrPhone = (emailOrPhone) => {
-  const isEmail = emailOrPhone.includes("@");
-  return User.findOne(
-    isEmail ? { email: emailOrPhone } : { mobileNumber: emailOrPhone },
-  );
-};
-
 const generateOtp = () => String(Math.floor(100000 + Math.random() * 900000));
 
 const signToken = (user) =>
-  jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+  jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
 
-const sanitize = (userDoc) => {
-  const user = userDoc.toObject();
-  delete user.password;
-  return user;
+const sanitize = (user) => {
+  const clean = { ...user };
+  delete clean.password;
+  return clean;
 };
 
 // ---------------- 1.1 Registration ----------------
 const signup = async (payload) => {
-  const existing = await User.findOne({
-    $or: [{ mobileNumber: payload.mobileNumber }, { email: payload.email }],
-  });
-  if (existing)
-    throw buildError("Mobile number or email already registered", 409);
+  const existing = await User.findByMobileOrEmail(payload.mobileNumber, payload.email);
+  if (existing) throw buildError("Mobile number or email already registered", 409);
 
   const otp = generateOtp();
 
@@ -52,7 +42,7 @@ const signup = async (payload) => {
   console.log(`🔑 Registration OTP for ${payload.mobileNumber}: ${otp}`);
 
   return {
-    userId: user._id,
+    userId: user.id,
     otpSent: true,
     ...(process.env.NODE_ENV !== "production" ? { otp } : {}),
   };
@@ -66,19 +56,13 @@ const bootstrapSuperAdmin = async ({ setupKey, ...payload }) => {
     throw buildError("Invalid setup key", 403);
   }
 
-  const existingSuperAdmin = await User.findOne({ role: "superadmin" });
+  const existingSuperAdmin = await User.findOneSuperadmin();
   if (existingSuperAdmin) {
-    throw buildError(
-      "A superadmin already exists — bootstrap is disabled",
-      403,
-    );
+    throw buildError("A superadmin already exists — bootstrap is disabled", 403);
   }
 
-  const existing = await User.findOne({
-    $or: [{ mobileNumber: payload.mobileNumber }, { email: payload.email }],
-  });
-  if (existing)
-    throw buildError("Mobile number or email already registered", 409);
+  const existing = await User.findByMobileOrEmail(payload.mobileNumber, payload.email);
+  if (existing) throw buildError("Mobile number or email already registered", 409);
 
   const user = await User.create({
     ...payload,
@@ -93,11 +77,8 @@ const bootstrapSuperAdmin = async ({ setupKey, ...payload }) => {
 
 // Super Admin creates Manager / Driver / Super Admin accounts
 const createStaff = async (payload) => {
-  const existing = await User.findOne({
-    $or: [{ mobileNumber: payload.mobileNumber }, { email: payload.email }],
-  });
-  if (existing)
-    throw buildError("Mobile number or email already registered", 409);
+  const existing = await User.findByMobileOrEmail(payload.mobileNumber, payload.email);
+  if (existing) throw buildError("Mobile number or email already registered", 409);
 
   const user = await User.create({
     ...payload,
@@ -111,25 +92,20 @@ const createStaff = async (payload) => {
 
 // ---------------- 1.2 Authentication ----------------
 const login = async ({ emailOrPhone, password }) => {
-  const user = await findByEmailOrPhone(emailOrPhone).select(
-    "+password +failedLoginAttempts",
-  );
+  const user = await User.findByEmailOrPhoneWithSecrets(emailOrPhone);
   if (!user) throw buildError("Invalid credentials", 401);
 
   if (user.centralStatus !== "active") {
     throw buildError(`Account is ${user.centralStatus}`, 403);
   }
 
-  const isMatch = await user.comparePassword(password);
+  const isMatch = await User.comparePassword(password, user.password);
   if (!isMatch) {
-    user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
-    await user.save();
+    await User.incrementFailedLoginAttempts(user.id);
     throw buildError("Invalid credentials", 401);
   }
 
-  user.failedLoginAttempts = 0;
-  user.lastLoginAt = new Date();
-  await user.save();
+  await User.recordLogin(user.id);
 
   const token = signToken(user);
   return { token, user: sanitize(user) };
@@ -141,16 +117,12 @@ const logout = async () => {
 };
 
 const forgotPassword = async ({ emailOrPhone }) => {
-  const user = await findByEmailOrPhone(emailOrPhone);
+  const user = await User.findByEmailOrPhone(emailOrPhone);
   if (!user) throw buildError("No account found", 404);
 
   const resetToken = crypto.randomBytes(32).toString("hex");
-  user.resetPasswordToken = crypto
-    .createHash("sha256")
-    .update(resetToken)
-    .digest("hex");
-  user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
-  await user.save();
+  const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+  await User.setResetToken(user.id, hashedToken, new Date(Date.now() + 15 * 60 * 1000));
 
   // TODO: dispatch resetToken via SMS/email provider once wired up
   console.log(`🔑 Password reset token for ${emailOrPhone}: ${resetToken}`);
@@ -163,74 +135,56 @@ const forgotPassword = async ({ emailOrPhone }) => {
 };
 
 const resetPassword = async ({ resetPasswordToken, newPassword }) => {
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(resetPasswordToken)
-    .digest("hex");
+  const hashedToken = crypto.createHash("sha256").update(resetPasswordToken).digest("hex");
 
-  const user = await User.findOne({
-    resetPasswordToken: hashedToken,
-    resetPasswordExpires: { $gt: new Date() },
-  }).select("+resetPasswordToken +resetPasswordExpires");
-
+  const user = await User.findByResetToken(hashedToken);
   if (!user) throw buildError("Reset token is invalid or expired", 400);
 
-  user.password = newPassword;
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpires = undefined;
-  await user.save();
+  await User.updatePassword(user.id, newPassword);
+  await User.clearResetToken(user.id);
 
   return { success: true };
 };
 
 const changePassword = async (userId, { oldPassword, newPassword }) => {
-  const user = await User.findById(userId).select("+password");
+  const user = await User.findByIdWithSecrets(userId);
   if (!user) throw buildError("User not found", 404);
 
-  const isMatch = await user.comparePassword(oldPassword);
+  const isMatch = await User.comparePassword(oldPassword, user.password);
   if (!isMatch) throw buildError("Old password is incorrect", 401);
 
-  user.password = newPassword;
-  await user.save();
+  await User.updatePassword(userId, newPassword);
 
   return { success: true };
 };
 
 const verifyOtp = async ({ emailOrPhone, code, purpose }) => {
-  const user = await findByEmailOrPhone(emailOrPhone).select(
-    "+otp.code +otp.purpose +otp.expiresAt",
-  );
-  if (
-    !user ||
-    !user.otp ||
-    user.otp.code !== code ||
-    user.otp.purpose !== purpose
-  ) {
+  const user = await User.findByEmailOrPhoneWithSecrets(emailOrPhone);
+  if (!user || !user.otp || user.otp.code !== code || user.otp.purpose !== purpose) {
     throw buildError("Invalid OTP", 400);
   }
-  if (user.otp.expiresAt < new Date()) throw buildError("OTP expired", 400);
+  if (new Date(user.otp.expiresAt) < new Date()) throw buildError("OTP expired", 400);
 
   if (purpose === "registration") {
-    user.isVerified = true;
-    user.isActivated = true;
+    await User.updateById(user.id, { isVerified: true, isActivated: true });
   }
 
-  user.otp = undefined;
-  await user.save();
+  await User.clearOtp(user.id);
 
   return { verified: true };
 };
 
 const activateAccount = async ({ userId, verificationToken }) => {
-  const user = await User.findById(userId).select("+verificationToken");
+  const user = await User.findByIdWithSecrets(userId);
   if (!user || user.verificationToken !== verificationToken) {
     throw buildError("Invalid activation request", 400);
   }
 
-  user.isActivated = true;
-  user.centralStatus = "active";
-  user.verificationToken = undefined;
-  await user.save();
+  await User.updateById(userId, {
+    isActivated: true,
+    centralStatus: "active",
+    verificationToken: null,
+  });
 
   return { activated: true };
 };
@@ -239,9 +193,7 @@ const deactivateAccount = async ({ userId, reason }) => {
   const user = await User.findById(userId);
   if (!user) throw buildError("User not found", 404);
 
-  user.isActivated = false;
-  user.centralStatus = "inactive";
-  await user.save();
+  await User.updateById(userId, { isActivated: false, centralStatus: "inactive" });
 
   return { deactivated: true, reason: reason || null };
 };
@@ -257,27 +209,16 @@ const getProfile = async (userId) => {
 const getAllUsers = async (query = {}) => {
   const { role, status, search, page = 1, limit = 20 } = query;
 
-  const filter = {};
-  if (role) filter.role = role;
-  if (status) filter.centralStatus = status;
-  if (search) {
-    filter.$or = [
-      { fullName: { $regex: search, $options: "i" } },
-      { mobileNumber: { $regex: search, $options: "i" } },
-      { email: { $regex: search, $options: "i" } },
-    ];
-  }
-
   const pageNum = Math.max(Number(page), 1);
   const limitNum = Math.max(Number(limit), 1);
 
-  const [users, total] = await Promise.all([
-    User.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((pageNum - 1) * limitNum)
-      .limit(limitNum),
-    User.countDocuments(filter),
-  ]);
+  const { users, total } = await User.findAll({
+    role,
+    status,
+    search,
+    page: pageNum,
+    limit: limitNum,
+  });
 
   return {
     users,
@@ -297,37 +238,27 @@ const getUserById = async (userId) => {
 };
 
 const updateProfile = async (userId, payload) => {
-  const user = await User.findByIdAndUpdate(userId, payload, {
-    new: true,
-    runValidators: true,
-  });
+  const user = await User.updateById(userId, payload);
   if (!user) throw buildError("User not found", 404);
   return user;
 };
 
-const updateProfilePicture = async (userId, { profilePicture }) => {
-  return updateProfile(userId, { profilePicture });
-};
+const updateProfilePicture = async (userId, { profilePicture }) =>
+  updateProfile(userId, { profilePicture });
 
 const updateContact = async (userId, payload) => {
   if (payload.mobileNumber || payload.email) {
-    const existing = await User.findOne({
-      _id: { $ne: userId },
-      $or: [
-        ...(payload.mobileNumber
-          ? [{ mobileNumber: payload.mobileNumber }]
-          : []),
-        ...(payload.email ? [{ email: payload.email }] : []),
-      ],
-    });
-    if (existing)
-      throw buildError("Mobile number or email already in use", 409);
+    const existing = await User.findOtherByMobileOrEmail(
+      userId,
+      payload.mobileNumber,
+      payload.email,
+    );
+    if (existing) throw buildError("Mobile number or email already in use", 409);
   }
   return updateProfile(userId, payload);
 };
 
-const updateAddress = async (userId, address) =>
-  updateProfile(userId, { address });
+const updateAddress = async (userId, address) => updateProfile(userId, { address });
 
 const updateDrivingLicense = async (userId, drivingLicense) =>
   updateProfile(userId, { drivingLicense });
@@ -337,10 +268,7 @@ const updateIdentification = async (userId, identification) =>
 
 // Super Admin: change role / permissions / status of any account
 const updateAccountControl = async (userId, payload) => {
-  const user = await User.findByIdAndUpdate(userId, payload, {
-    new: true,
-    runValidators: true,
-  });
+  const user = await User.updateById(userId, payload);
   if (!user) throw buildError("User not found", 404);
   return user;
 };

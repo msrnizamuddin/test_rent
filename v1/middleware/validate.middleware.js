@@ -25,9 +25,16 @@ export const validate = (schema, property = "body") => {
     }
 
     if (property === "query") {
-      // Express 5 makes req.query a getter-only property — mutate in place instead of reassigning
-      Object.keys(req.query).forEach((key) => delete req.query[key]);
-      Object.assign(req.query, value);
+      // Express 5's req.query is a live getter that re-parses req.url on every
+      // access (no caching), so mutating the object it returns is a no-op —
+      // the next read just recomputes from scratch. Replace the getter itself
+      // with the validated, coerced value instead.
+      Object.defineProperty(req, "query", {
+        value,
+        writable: true,
+        configurable: true,
+        enumerable: true,
+      });
     } else {
       req[property] = value;
     }

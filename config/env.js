@@ -4,11 +4,13 @@ dotenv.config();
 
 export const env = {
   PORT: process.env.PORT || 5000,
-  MONGO_URI: process.env.MONGO_URI,
+  DATABASE_URL: process.env.DATABASE_URL,
+  JWT_SECRET: process.env.JWT_SECRET,
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
 };
 
 // validation
-if (!env.MONGO_URI) {
-  console.error("❌ MONGO_URI missing in .env");
+if (!env.DATABASE_URL) {
+  console.error("❌ DATABASE_URL missing in .env");
   process.exit(1);
 }

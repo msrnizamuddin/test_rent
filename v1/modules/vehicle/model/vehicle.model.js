@@ -1,174 +1,264 @@
-import mongoose from "mongoose";
+import { query } from "../../../../config/db.js";
 
-const vehicleSchema = new mongoose.Schema(
-  {
-    // ---------------- 2.3 Vehicle Details ----------------
-    vehicleName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+const mapVehicle = (row) => {
+  if (!row) return null;
+  return {
+    id: row.id,
+    vehicleName: row.vehicle_name,
+    brand: row.brand,
+    vehicleModel: row.vehicle_model,
+    categoryId: row.category_id,
+    category: row.category, // populated by joined queries only
+    vehicleType: row.vehicle_type,
+    images: row.images,
+    registrationNumber: row.registration_number,
+    modelYear: row.model_year,
+    seatingCapacity: row.seating_capacity,
+    fuelType: row.fuel_type,
+    transmission: row.transmission,
+    isAC: row.is_ac,
+    features: row.features,
+    color: row.color,
+    location: row.location,
+    estimatedRentalRate: row.estimated_rental_rate,
+    availabilityStatus: row.availability_status,
+    driverRequired: row.driver_required,
+    ownerInfo: row.owner_info,
+    documents: row.documents,
+    createdBy: row.created_by,
+    updatedBy: row.updated_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+};
 
-    brand: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+const COLUMNS = `
+  id, vehicle_name, brand, vehicle_model, category_id, vehicle_type, images,
+  registration_number, model_year, seating_capacity, fuel_type, transmission,
+  is_ac, features, color, location, estimated_rental_rate, availability_status,
+  driver_required, owner_info, documents, created_by, updated_by, created_at, updated_at
+`;
 
-    vehicleModel: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+// Browsing only shows vehicles that are actually rentable/visible to the public
+const PUBLICLY_VISIBLE_STATUSES = ["available", "assigned", "on-trip"];
 
-    // ref to Vehicle Category Module (module 20); kept as plain string fallback
-    // until that module exists, so this model works standalone for now
-    category: {
-      type: String,
-      required: true,
-      trim: true,
-      // e.g. Sedan, SUV, Microbus, Minibus, Bus, Premium, Luxury, Corporate, Family, Executive
-    },
+const search = async ({
+  search: searchTerm,
+  brand,
+  categoryId,
+  location,
+  vehicleType,
+  seatingCapacity,
+  minPrice,
+  maxPrice,
+  isAC,
+  transmission,
+  fuelType,
+  availability,
+  page,
+  limit,
+  sortBy,
+  sortOrder,
+}) => {
+  const conditions = [];
+  const values = [];
 
-    vehicleType: {
-      type: String,
-      required: true,
-      enum: [
-        "sedan",
-        "suv",
-        "hatchback",
-        "microbus",
-        "minibus",
-        "bus",
-        "pickup",
-        "van",
-        "coaster",
-        "other",
-      ],
-    },
+  if (availability) {
+    values.push(availability);
+    conditions.push(`availability_status = $${values.length}`);
+  } else {
+    values.push(PUBLICLY_VISIBLE_STATUSES);
+    conditions.push(`availability_status = ANY($${values.length})`);
+  }
 
-    images: {
-      type: [String],
-      default: [],
-    },
+  if (searchTerm) {
+    values.push(`%${searchTerm}%`);
+    const idx = values.length;
+    conditions.push(`(vehicle_name ILIKE $${idx} OR brand ILIKE $${idx})`);
+  }
+  if (brand) {
+    values.push(brand);
+    conditions.push(`brand ILIKE $${values.length}`);
+  }
+  if (categoryId) {
+    values.push(categoryId);
+    conditions.push(`category_id = $${values.length}`);
+  }
+  if (vehicleType) {
+    values.push(vehicleType);
+    conditions.push(`vehicle_type = $${values.length}`);
+  }
+  if (seatingCapacity) {
+    values.push(seatingCapacity);
+    conditions.push(`seating_capacity >= $${values.length}`);
+  }
+  if (typeof isAC === "boolean") {
+    values.push(isAC);
+    conditions.push(`is_ac = $${values.length}`);
+  }
+  if (transmission) {
+    values.push(transmission);
+    conditions.push(`transmission = $${values.length}`);
+  }
+  if (fuelType) {
+    values.push(fuelType);
+    conditions.push(`fuel_type = $${values.length}`);
+  }
+  if (location) {
+    values.push(`%${location}%`);
+    const idx = values.length;
+    conditions.push(
+      `(location->>'city' ILIKE $${idx} OR location->>'district' ILIKE $${idx} OR location->>'address' ILIKE $${idx})`,
+    );
+  }
+  if (minPrice !== undefined) {
+    values.push(minPrice);
+    conditions.push(`(estimated_rental_rate->>'perDay')::numeric >= $${values.length}`);
+  }
+  if (maxPrice !== undefined) {
+    values.push(maxPrice);
+    conditions.push(`(estimated_rental_rate->>'perDay')::numeric <= $${values.length}`);
+  }
 
-    registrationNumber: {
-      type: String,
-      required: true,
-      trim: true,
-      unique: true,
-    },
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    modelYear: {
-      type: Number,
-      required: true,
-    },
+  const sortColumn =
+    sortBy === "estimatedRentalRate.perDay"
+      ? "(estimated_rental_rate->>'perDay')::numeric"
+      : sortBy === "modelYear"
+        ? "model_year"
+        : "created_at";
+  const direction = sortOrder === "asc" ? "ASC" : "DESC";
 
-    seatingCapacity: {
-      type: Number,
-      required: true,
-    },
+  const offset = (page - 1) * limit;
+  values.push(limit, offset);
 
-    fuelType: {
-      type: String,
-      enum: ["petrol", "diesel", "cng", "electric", "hybrid"],
-      required: true,
-    },
+  const [{ rows }, countResult] = await Promise.all([
+    query(
+      `SELECT ${COLUMNS} FROM vehicles ${where}
+       ORDER BY ${sortColumn} ${direction} LIMIT $${values.length - 1} OFFSET $${values.length}`,
+      values,
+    ),
+    query(`SELECT COUNT(*)::int AS total FROM vehicles ${where}`, values.slice(0, -2)),
+  ]);
 
-    transmission: {
-      type: String,
-      enum: ["manual", "automatic"],
-      required: true,
-    },
+  return { vehicles: rows.map(mapVehicle), total: countResult.rows[0].total };
+};
 
-    isAC: {
-      type: Boolean,
-      default: true,
-    },
+const findPubliclyVisibleById = async (id) => {
+  const { rows } = await query(
+    `SELECT ${COLUMNS} FROM vehicles WHERE id = $1 AND availability_status = ANY($2)`,
+    [id, PUBLICLY_VISIBLE_STATUSES],
+  );
+  return mapVehicle(rows[0]);
+};
 
-    features: {
-      type: [String],
-      default: [], // e.g. "Bluetooth", "GPS", "Sunroof", "Child Seat"
-    },
+const findById = async (id) => {
+  const { rows } = await query(`SELECT ${COLUMNS} FROM vehicles WHERE id = $1`, [id]);
+  return mapVehicle(rows[0]);
+};
 
-    location: {
-      address: { type: String, trim: true },
-      city: { type: String, trim: true },
-      district: { type: String, trim: true },
-      latitude: { type: Number },
-      longitude: { type: Number },
-    },
+const findByRegistrationNumber = async (registrationNumber, excludeId) => {
+  const { rows } = await query(
+    `SELECT id FROM vehicles WHERE registration_number = $1 AND ($2::uuid IS NULL OR id <> $2)`,
+    [registrationNumber, excludeId || null],
+  );
+  return rows[0] || null;
+};
 
-    // shown to users during browsing as an estimate; final pricing rules
-    // live in the Pricing & Fare Management module
-    estimatedRentalRate: {
-      perDay: { type: Number },
-      perHour: { type: Number },
-      perKm: { type: Number },
-    },
-
-    // Vehicle Status (module 7) — "available"/"on-trip" etc. gate browsing visibility
-    availabilityStatus: {
-      type: String,
-      enum: [
-        "pending",
-        "approved",
-        "rejected",
-        "available",
-        "assigned",
-        "on-trip",
-        "maintenance",
-        "inactive",
-      ],
-      default: "pending",
-    },
-
-    color: {
-      type: String,
-      trim: true,
-    },
-
-    driverRequired: {
-      type: Boolean,
-      default: false,
-    },
-
-    ownerInfo: {
-      name: { type: String, trim: true },
-      contactNumber: { type: String, trim: true },
-      nidNumber: { type: String, trim: true },
-    },
-
-    documents: [
-      {
-        title: { type: String, trim: true }, // e.g. Registration, Fitness, Insurance, Tax Token
-        fileUrl: { type: String },
-        uploadedAt: { type: Date, default: Date.now },
-      },
+const create = async (payload, userId) => {
+  const { rows } = await query(
+    `INSERT INTO vehicles (
+       vehicle_name, brand, vehicle_model, category_id, vehicle_type, images,
+       registration_number, model_year, seating_capacity, fuel_type, transmission,
+       is_ac, features, color, location, estimated_rental_rate, availability_status,
+       driver_required, owner_info, documents, created_by
+     ) VALUES (
+       $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21
+     ) RETURNING ${COLUMNS}`,
+    [
+      payload.vehicleName,
+      payload.brand,
+      payload.vehicleModel,
+      payload.categoryId || null,
+      payload.vehicleType,
+      payload.images || [],
+      payload.registrationNumber,
+      payload.modelYear,
+      payload.seatingCapacity,
+      payload.fuelType,
+      payload.transmission,
+      payload.isAC ?? true,
+      payload.features || [],
+      payload.color || null,
+      payload.location ? JSON.stringify(payload.location) : null,
+      payload.estimatedRentalRate ? JSON.stringify(payload.estimatedRentalRate) : null,
+      payload.availabilityStatus || "pending",
+      payload.driverRequired ?? false,
+      payload.ownerInfo ? JSON.stringify(payload.ownerInfo) : null,
+      JSON.stringify(payload.documents || []),
+      userId,
     ],
+  );
 
-    // audit — populated once the Entry & Approval module (7) wires this up
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
+  return mapVehicle(rows[0]);
+};
 
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-  },
-  {
-    timestamps: true,
-    versionKey: false,
-  },
-);
+const COLUMN_MAP = {
+  vehicleName: "vehicle_name",
+  brand: "brand",
+  vehicleModel: "vehicle_model",
+  categoryId: "category_id",
+  vehicleType: "vehicle_type",
+  images: "images",
+  registrationNumber: "registration_number",
+  modelYear: "model_year",
+  seatingCapacity: "seating_capacity",
+  fuelType: "fuel_type",
+  transmission: "transmission",
+  isAC: "is_ac",
+  features: "features",
+  color: "color",
+  location: "location",
+  estimatedRentalRate: "estimated_rental_rate",
+  availabilityStatus: "availability_status",
+  driverRequired: "driver_required",
+  ownerInfo: "owner_info",
+  documents: "documents",
+  updatedBy: "updated_by",
+};
 
-// Search & filter performance
-vehicleSchema.index({ vehicleName: "text", brand: "text" });
-vehicleSchema.index({ category: 1 });
-vehicleSchema.index({ vehicleType: 1 });
-vehicleSchema.index({ "location.city": 1 });
-vehicleSchema.index({ availabilityStatus: 1 });
+const JSON_COLUMNS = new Set(["location", "estimated_rental_rate", "owner_info", "documents"]);
 
-export default mongoose.model("Vehicle", vehicleSchema);
+const updateById = async (id, payload) => {
+  const entries = Object.entries(payload).filter(([key]) => COLUMN_MAP[key] !== undefined);
+  if (!entries.length) return findById(id);
+
+  const setClauses = entries.map(([key], idx) => `${COLUMN_MAP[key]} = $${idx + 2}`);
+  const values = entries.map(([key, value]) =>
+    JSON_COLUMNS.has(COLUMN_MAP[key]) ? JSON.stringify(value) : value,
+  );
+
+  const { rows } = await query(
+    `UPDATE vehicles SET ${setClauses.join(", ")}, updated_at = now()
+     WHERE id = $1 RETURNING ${COLUMNS}`,
+    [id, ...values],
+  );
+
+  return mapVehicle(rows[0]);
+};
+
+const deleteById = async (id) => {
+  const { rows } = await query(`DELETE FROM vehicles WHERE id = $1 RETURNING id`, [id]);
+  return rows[0] || null;
+};
+
+export default {
+  search,
+  findPubliclyVisibleById,
+  findById,
+  findByRegistrationNumber,
+  create,
+  updateById,
+  deleteById,
+};

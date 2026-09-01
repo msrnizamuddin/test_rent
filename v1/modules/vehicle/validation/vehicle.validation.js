@@ -1,12 +1,6 @@
 import Joi from "joi";
-import mongoose from "mongoose";
 
-const objectId = (value, helpers) => {
-  if (!mongoose.Types.ObjectId.isValid(value)) {
-    return helpers.message("invalid objectId");
-  }
-  return value;
-};
+const objectId = Joi.string().guid({ version: "uuidv4" });
 
 // ---------------- 2.1 Vehicle Search + 2.2 Vehicle Filter (combined) ----------------
 // GET /vehicles?search=&brand=&category=&location=&vehicleType=&seatingCapacity=
@@ -16,7 +10,7 @@ export const searchVehicleValidation = Joi.object({
   // 2.1 Search
   search: Joi.string().trim().optional(), // matches vehicleName / brand (text search)
   brand: Joi.string().trim().optional(),
-  category: Joi.string().trim().optional(),
+  categoryId: objectId.optional(),
   location: Joi.string().trim().optional(), // matches city / district / address
   vehicleType: Joi.string()
     .valid(
@@ -57,7 +51,7 @@ export const searchVehicleValidation = Joi.object({
 
 // ---------------- 2.3 Vehicle Details ----------------
 export const vehicleIdParamValidation = Joi.object({
-  vehicleId: Joi.string().custom(objectId).required(),
+  vehicleId: objectId.required(),
 });
 
 // ---------------- Vehicle Entry (module 7, superadmin/manager only) ----------------
@@ -85,7 +79,7 @@ export const createVehicleValidation = Joi.object({
   vehicleName: Joi.string().trim().required(),
   brand: Joi.string().trim().required(),
   vehicleModel: Joi.string().trim().required(),
-  category: Joi.string().trim().required(),
+  categoryId: objectId.required(),
   vehicleType: Joi.string()
     .valid(
       "sedan",
@@ -137,7 +131,7 @@ export const updateVehicleValidation = Joi.object({
   vehicleName: Joi.string().trim(),
   brand: Joi.string().trim(),
   vehicleModel: Joi.string().trim(),
-  category: Joi.string().trim(),
+  categoryId: objectId,
   vehicleType: Joi.string().valid(
     "sedan",
     "suv",
