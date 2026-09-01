@@ -12,7 +12,8 @@
     "build": "node server.js",
     "start-dev": "nodemon server.js",
     "start": "node server.js",
-    "migrate": "node database/migrate.js"
+    "migrate": "node database/migrate.js",
+    "seed:superadmin": "node database/seed-superadmin.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1088.0",
