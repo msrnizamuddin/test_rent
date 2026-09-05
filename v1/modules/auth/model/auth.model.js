@@ -214,17 +214,25 @@ const clearOtp = async (id) => {
   });
 };
 
+// Returns the post-increment count so the service layer can decide whether
+// this attempt crosses the auto-lock threshold (spec module 30: Account Blocking).
 const incrementFailedLoginAttempts = async (id) => {
-  await prisma.user.update({
+  const user = await prisma.user.update({
     where: { id },
     data: { failedLoginAttempts: { increment: 1 } },
+    select: { failedLoginAttempts: true },
   });
+  return user.failedLoginAttempts;
 };
 
-const recordLogin = async (id) => {
+const lockAccount = async (id) => {
+  await prisma.user.update({ where: { id }, data: { centralStatus: "suspended" } });
+};
+
+const recordLogin = async (id, ip) => {
   await prisma.user.update({
     where: { id },
-    data: { failedLoginAttempts: 0, lastLoginAt: new Date() },
+    data: { failedLoginAttempts: 0, lastLoginAt: new Date(), lastLoginIp: ip || null },
   });
 };
 
@@ -293,6 +301,7 @@ export default {
   setOtp,
   clearOtp,
   incrementFailedLoginAttempts,
+  lockAccount,
   recordLogin,
   setResetToken,
   findByResetToken,

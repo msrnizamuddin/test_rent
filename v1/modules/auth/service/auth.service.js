@@ -1,6 +1,11 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import User from "../model/auth.model.js";
+import { recordAuditLog } from "../../audit-log/service/audit-log.service.js";
+
+// Spec module 30 "Account Blocking": lock the account after this many
+// consecutive failed login attempts, rather than leaving it purely advisory.
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
 
 const buildError = (message, statusCode = 400) => {
   const err = new Error(message);
@@ -91,21 +96,55 @@ const createStaff = async (payload) => {
 };
 
 // ---------------- 1.2 Authentication ----------------
-const login = async ({ emailOrPhone, password }) => {
+const login = async ({ emailOrPhone, password }, ip) => {
   const user = await User.findByEmailOrPhoneWithSecrets(emailOrPhone);
-  if (!user) throw buildError("Invalid credentials", 401);
+  if (!user) {
+    await recordAuditLog({ action: "login.failed", metadata: { emailOrPhone, reason: "no_such_account" }, ipAddress: ip });
+    throw buildError("Invalid credentials", 401);
+  }
 
   if (user.centralStatus !== "active") {
+    await recordAuditLog({
+      actorId: user.id,
+      action: "login.blocked",
+      entityType: "user",
+      entityId: user.id,
+      metadata: { centralStatus: user.centralStatus },
+      ipAddress: ip,
+    });
     throw buildError(`Account is ${user.centralStatus}`, 403);
   }
 
   const isMatch = await User.comparePassword(password, user.password);
   if (!isMatch) {
-    await User.incrementFailedLoginAttempts(user.id);
+    const attempts = await User.incrementFailedLoginAttempts(user.id);
+
+    if (attempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+      await User.lockAccount(user.id);
+      await recordAuditLog({
+        actorId: user.id,
+        action: "account.auto_locked",
+        entityType: "user",
+        entityId: user.id,
+        metadata: { failedLoginAttempts: attempts },
+        ipAddress: ip,
+      });
+      throw buildError("Account locked after too many failed login attempts", 403);
+    }
+
+    await recordAuditLog({
+      actorId: user.id,
+      action: "login.failed",
+      entityType: "user",
+      entityId: user.id,
+      metadata: { failedLoginAttempts: attempts },
+      ipAddress: ip,
+    });
     throw buildError("Invalid credentials", 401);
   }
 
-  await User.recordLogin(user.id);
+  await User.recordLogin(user.id, ip);
+  await recordAuditLog({ actorId: user.id, action: "login.success", entityType: "user", entityId: user.id, ipAddress: ip });
 
   const token = signToken(user);
   return { token, user: sanitize(user) };
