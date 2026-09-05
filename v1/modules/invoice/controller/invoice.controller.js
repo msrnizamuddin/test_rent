@@ -37,3 +37,9 @@ export const getMyInvoices = handle(async (req) => {
   const data = await invoiceService.getMyInvoices(req.user.id);
   return { message: "Invoices fetched successfully", data };
 });
+
+// Safe "get everything" — no filters, no conditions.
+export const getAll = handle(async () => {
+  const data = await invoiceService.getAll();
+  return { message: "All invoices fetched successfully", data };
+});

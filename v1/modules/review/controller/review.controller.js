@@ -43,6 +43,12 @@ export const getAllReviews = handle(async (req) => {
   return { message: "Reviews fetched successfully", data };
 });
 
+// Safe "get everything" — no filters, no conditions.
+export const getAll = handle(async () => {
+  const data = await reviewService.getAll();
+  return { message: "All reviews fetched successfully", data };
+});
+
 // ---------------- PATCH /:reviewId/hide ----------------
 export const hideReview = handle(async (req) => {
   const data = await reviewService.hideReview(req.params.reviewId);

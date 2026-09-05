@@ -18,6 +18,12 @@ export const searchCategories = handle(async (req) => {
   return { message: "Vehicle categories fetched successfully", data };
 });
 
+// Safe "get everything" — no filters, no conditions.
+export const getAll = handle(async () => {
+  const data = await vehicleCategoryService.getAll();
+  return { message: "All vehicle categories fetched successfully", data };
+});
+
 export const getCategoryById = handle(async (req) => {
   const data = await vehicleCategoryService.getCategoryById(req.params.categoryId);
   return { message: "Vehicle category fetched successfully", data };

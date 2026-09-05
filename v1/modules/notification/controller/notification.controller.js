@@ -51,3 +51,9 @@ export const getAllNotifications = handle(async (req) => {
   const data = await notificationService.getAllNotifications(req.query);
   return { message: "Notifications fetched successfully", data };
 });
+
+// Safe "get everything" — no filters, no conditions.
+export const getAll = handle(async () => {
+  const data = await notificationService.getAll();
+  return { message: "All notifications fetched successfully", data };
+});

@@ -86,6 +86,15 @@ const findAll = async ({ userId, channel, page, limit }) => {
   return { notifications: notifications.map(mapNotification), total };
 };
 
+// Safe "get everything" — no where clause, no pagination.
+const getAll = async () => {
+  const notifications = await prisma.notification.findMany({
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+  return notifications.map(mapNotification);
+};
+
 const markReadForUser = async (id, userId) => {
   const { count } = await prisma.notification.updateMany({
     where: { id, userId },
@@ -113,6 +122,7 @@ export default {
   findById,
   findForUser,
   findAll,
+  getAll,
   markReadForUser,
   markAllReadForUser,
   deleteForUser,

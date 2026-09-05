@@ -16,6 +16,9 @@ import {
 
 const router = express.Router();
 
+// Safe "get everything" — no filters, no conditions.
+router.get("/all", authenticate, authorize("superadmin", "manager"), controller.getAll);
+
 // ---------------- GET /mine ----------------
 router.get(
   "/mine",

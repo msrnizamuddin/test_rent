@@ -539,3 +539,111 @@ model Review {
   @@index([vehicleId])
   @@map("reviews")
 }
+
+// ---------------------------------------------------------------------------
+// 11. Vehicle Maintenance
+// ---------------------------------------------------------------------------
+model VehicleMaintenance {
+  id        String @id @default(uuid()) @db.Uuid
+  vehicleId String @map("vehicle_id") @db.Uuid
+
+  maintenanceType String    @map("maintenance_type")
+  serviceDate     DateTime  @map("service_date") @db.Date
+  nextServiceDate DateTime? @map("next_service_date") @db.Date
+  cost            Decimal?  @db.Decimal
+  notes           String?
+  documents       Json      @default("[]")
+  status          MaintenanceStatus @default(scheduled)
+
+  createdById String? @map("created_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([vehicleId])
+  @@index([status])
+  @@map("vehicle_maintenance")
+}
+
+enum MaintenanceStatus {
+  scheduled
+  in_progress
+  completed
+  cancelled
+
+  @@map("maintenance_status")
+}
+
+// ---------------------------------------------------------------------------
+// 12. Support Tickets
+// ---------------------------------------------------------------------------
+model SupportTicket {
+  id       String @id @default(uuid()) @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+
+  subject  String
+  message  String
+  category String?
+  status   TicketStatus @default(open)
+
+  assignedToId String? @map("assigned_to") @db.Uuid
+  adminReply   String? @map("admin_reply")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([userId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  resolved
+  closed
+
+  @@map("ticket_status")
+}
+
+// ---------------------------------------------------------------------------
+// 13. Pricing Rules
+// ---------------------------------------------------------------------------
+model PricingRule {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  tripType   TripType? @map("trip_type")
+  categoryId String?  @map("category_id") @db.Uuid
+  vehicleId  String?  @map("vehicle_id") @db.Uuid
+
+  perKmRate      Decimal? @map("per_km_rate") @db.Decimal
+  perHourRate    Decimal? @map("per_hour_rate") @db.Decimal
+  perDayRate     Decimal? @map("per_day_rate") @db.Decimal
+  driverCharge   Decimal? @map("driver_charge") @db.Decimal
+  waitingCharge  Decimal? @map("waiting_charge") @db.Decimal
+  extraKmCharge  Decimal? @map("extra_km_charge") @db.Decimal
+  nightCharge    Decimal? @map("night_charge") @db.Decimal
+  serviceCharge  Decimal? @map("service_charge") @db.Decimal
+  taxPercent     Decimal? @map("tax_percent") @db.Decimal
+
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([categoryId])
+  @@index([vehicleId])
+  @@map("pricing_rules")
+}
+
+// ---------------------------------------------------------------------------
+// 14. Site Settings (single-row key/value store)
+// ---------------------------------------------------------------------------
+model Setting {
+  key   String @id
+  value Json
+
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("settings")
+}

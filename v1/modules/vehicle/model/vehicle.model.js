@@ -129,6 +129,15 @@ const search = async ({
   return { vehicles: vehicles.map(mapVehicle), total };
 };
 
+// Safe "get everything" — no where clause, every vehicle regardless of status.
+const getAll = async () => {
+  const vehicles = await prisma.vehicle.findMany({
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+  return vehicles.map(mapVehicle);
+};
+
 const findPubliclyVisibleById = async (id) => {
   const vehicle = await prisma.vehicle.findFirst({
     where: { id, availabilityStatus: { in: PUBLICLY_VISIBLE_STATUSES } },
@@ -233,6 +242,7 @@ const deleteById = async (id) => {
 
 export default {
   search,
+  getAll,
   findPubliclyVisibleById,
   findById,
   findByRegistrationNumber,

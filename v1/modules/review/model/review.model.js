@@ -148,6 +148,15 @@ const findAll = async ({ driverId, vehicleId, isHidden, page, limit }) => {
   return { reviews: reviews.map(mapReview), total };
 };
 
+// Safe "get everything" — no where clause, no pagination.
+const getAll = async () => {
+  const reviews = await prisma.review.findMany({
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+  return reviews.map(mapReview);
+};
+
 const setHidden = async (id, isHidden) => {
   try {
     const review = await prisma.review.update({
@@ -179,6 +188,7 @@ export default {
   findVisibleForDriver,
   findVisibleForVehicle,
   findAll,
+  getAll,
   setHidden,
   deleteById,
 };

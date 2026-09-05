@@ -22,6 +22,9 @@ const searchVehicles = async (query) => {
   };
 };
 
+// Safe "get everything" — no filters, no conditions.
+const getAll = async () => Vehicle.getAll();
+
 // ---------------- 2.3 Vehicle Details ----------------
 const getVehicleById = async (vehicleId) => {
   const vehicle = await Vehicle.findPubliclyVisibleById(vehicleId);
@@ -62,6 +65,7 @@ const deleteVehicle = async (vehicleId) => {
 
 export default {
   searchVehicles,
+  getAll,
   getVehicleById,
   createVehicle,
   updateVehicle,

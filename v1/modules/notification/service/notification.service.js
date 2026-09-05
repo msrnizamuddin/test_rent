@@ -63,6 +63,9 @@ const getAllNotifications = async (query) => {
   };
 };
 
+// Safe "get everything" — no filters, no conditions.
+const getAll = async () => Notification.getAll();
+
 export default {
   createNotification,
   getMyNotifications,
@@ -71,4 +74,5 @@ export default {
   deleteNotification,
   sendNotification,
   getAllNotifications,
+  getAll,
 };

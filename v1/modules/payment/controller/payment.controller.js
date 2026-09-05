@@ -38,6 +38,12 @@ export const listPayments = handle(async (req) => {
   return { message: "Payments fetched successfully", data };
 });
 
+// Safe "get everything" — no filters, no conditions.
+export const getAll = handle(async () => {
+  const data = await paymentService.getAll();
+  return { message: "All payments fetched successfully", data };
+});
+
 export const refundPayment = handle(async (req) => {
   const data = await paymentService.refundPayment(req.params.paymentId, req.body.reason);
   return { message: "Payment refunded successfully", data };

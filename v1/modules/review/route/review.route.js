@@ -38,6 +38,9 @@ router.get(
   controller.getAllReviews,
 );
 
+// Safe "get everything" — no filters, no conditions.
+router.get("/all", authenticate, authorize("superadmin", "manager"), controller.getAll);
+
 // ---------------- GET /driver/:driverId (public) ----------------
 router.get(
   "/driver/:driverId",

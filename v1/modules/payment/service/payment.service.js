@@ -111,6 +111,9 @@ const refundPayment = async (paymentId, reason) => {
   return { ...payment, refundReason: reason || null };
 };
 
+// Safe "get everything" — no filters, no conditions.
+const getAll = async () => Payment.getAll();
+
 export default {
   recordPayment,
   updatePaymentStatus,
@@ -118,4 +121,5 @@ export default {
   getPaymentsByTrip,
   listPayments,
   refundPayment,
+  getAll,
 };

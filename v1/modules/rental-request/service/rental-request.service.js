@@ -265,12 +265,16 @@ const rejectRentalRequest = async (requestId, { reason }) => {
   });
 };
 
+// Safe "get everything" — no filters, no conditions.
+const getAll = async () => RentalRequest.getAll();
+
 export default {
   createRentalRequest,
   getMyRentalRequests,
   getRentalRequestById,
   cancelRentalRequest,
   listRentalRequests,
+  getAll,
   reviewRentalRequest,
   confirmRentalRequest,
   assignVehicle,

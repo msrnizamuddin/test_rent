@@ -10,6 +10,9 @@ const searchCategories = async (query) => {
   return VehicleCategory.search(query);
 };
 
+// Safe "get everything" — no filters, no conditions.
+const getAll = async () => VehicleCategory.getAll();
+
 const getCategoryById = async (categoryId) => {
   const category = await VehicleCategory.findById(categoryId);
   if (!category) throw buildError("Category not found", 404);
@@ -49,6 +52,7 @@ const deleteCategory = async (categoryId) => {
 
 export default {
   searchCategories,
+  getAll,
   getCategoryById,
   createCategory,
   updateCategory,
