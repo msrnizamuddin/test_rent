@@ -38,7 +38,7 @@ export const createStaff = handle(async (req) => {
 
 // ---------------- 1.2 Authentication ----------------
 export const login = handle(async (req) => {
-  const data = await authService.login(req.body);
+  const data = await authService.login(req.body, req.ip);
   return { message: "Login successful", data };
 });
 

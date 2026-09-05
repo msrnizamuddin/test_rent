@@ -667,3 +667,42 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_logs")
 }
+
+// ---------------------------------------------------------------------------
+// 16. Documents (spec module 25: upload/verify/reject workflow, per file —
+// distinct from the flexible `documents: Json[]` blobs already on User and
+// Vehicle, which have no per-file status)
+// ---------------------------------------------------------------------------
+model Document {
+  id          String         @id @default(uuid()) @db.Uuid
+  ownerType   DocumentOwner  @map("owner_type")
+  ownerId     String         @map("owner_id") @db.Uuid
+  category    String
+  fileUrl     String         @map("file_url")
+  expiryDate  DateTime?      @map("expiry_date") @db.Date
+  status      DocumentStatus @default(pending)
+  rejectionReason String?    @map("rejection_reason")
+  verifiedById String?       @map("verified_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([ownerType, ownerId])
+  @@index([status])
+  @@map("documents")
+}
+
+enum DocumentOwner {
+  user
+  vehicle
+
+  @@map("document_owner")
+}
+
+enum DocumentStatus {
+  pending
+  verified
+  rejected
+
+  @@map("document_status")
+}
