@@ -36,6 +36,12 @@ export const listTrips = handle(async (req) => {
   return { message: "Trips fetched successfully", data };
 });
 
+// Safe "get everything" — no filters, no conditions.
+export const getAll = handle(async () => {
+  const data = await tripService.getAll();
+  return { message: "All trips fetched successfully", data };
+});
+
 // ---------------- 15. Driver: Status Transitions ----------------
 export const driverAction = handle(async (req) => {
   const data = await tripService.driverAction(req.params.tripId, req.user.id, req.body);

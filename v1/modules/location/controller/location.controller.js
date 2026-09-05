@@ -18,6 +18,12 @@ export const searchLocations = handle(async (req) => {
   return { message: "Locations fetched successfully", data };
 });
 
+// Safe "get everything" — no filters, no conditions.
+export const getAll = handle(async () => {
+  const data = await locationService.getAll();
+  return { message: "All locations fetched successfully", data };
+});
+
 export const getLocationById = handle(async (req) => {
   const data = await locationService.getLocationById(req.params.locationId);
   return { message: "Location fetched successfully", data };

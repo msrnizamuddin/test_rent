@@ -128,11 +128,15 @@ const cancelTrip = async (tripId, { reason }) => {
   return Trip.updateById(tripId, { status: "cancelled" });
 };
 
+// Safe "get everything" — no filters, no conditions.
+const getAll = async () => Trip.getAll();
+
 export default {
   getMyTrips,
   getAssignedTrips,
   getTripById,
   listTrips,
+  getAll,
   driverAction,
   updateLocation,
   cancelTrip,

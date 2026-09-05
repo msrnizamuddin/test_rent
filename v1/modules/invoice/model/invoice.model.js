@@ -87,6 +87,15 @@ const findByCustomerId = async (customerId) => {
   return invoices.map(mapInvoice);
 };
 
+// Safe "get everything" — no where clause, no pagination.
+const getAll = async () => {
+  const invoices = await prisma.invoice.findMany({
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+  return invoices.map(mapInvoice);
+};
+
 const search = async ({ paymentStatus, page, limit }) => {
   const where = {};
   if (paymentStatus) where.paymentStatus = paymentStatus;
@@ -131,6 +140,7 @@ export default {
   findById,
   findByCustomerId,
   search,
+  getAll,
   findTripById,
   sumPaidPaymentsForTrip,
 };

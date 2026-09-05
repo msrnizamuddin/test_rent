@@ -157,6 +157,15 @@ const findAll = async ({ status, driverId, customerId, page, limit }) => {
   return { trips: trips.map(mapTrip), total };
 };
 
+// Safe "get everything" — no where clause, no pagination.
+const getAll = async () => {
+  const trips = await prisma.trip.findMany({
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+  return trips.map(mapTrip);
+};
+
 // Double-booking guard: does this vehicle/driver already have an active trip
 // whose [pickup_date, COALESCE(return_date, pickup_date)] range overlaps the
 // given range? excludeTripId lets an update ignore the trip's own row.
@@ -190,6 +199,7 @@ export default {
   findMineByCustomer,
   findAssignedByDriver,
   findAll,
+  getAll,
   vehicleHasOverlap,
   driverHasOverlap,
 };

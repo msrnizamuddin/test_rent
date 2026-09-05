@@ -13,6 +13,12 @@ const handle = (fn) => async (req, res, next) => {
   }
 };
 
+// Safe "get everything" — no filters, no conditions (staff-only, see route).
+export const getAll = handle(async () => {
+  const data = await vehicleService.getAll();
+  return { message: "All vehicles fetched successfully", data };
+});
+
 // ---------------- 2.1 Search + 2.2 Filter ----------------
 export const searchVehicles = handle(async (req) => {
   const data = await vehicleService.searchVehicles(req.query);

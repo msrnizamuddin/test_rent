@@ -31,6 +31,15 @@ const search = async ({ status }) => {
   return categories.map(mapCategory);
 };
 
+// Safe "get everything" — no where clause at all.
+const getAll = async () => {
+  const categories = await prisma.vehicleCategory.findMany({
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+  return categories.map(mapCategory);
+};
+
 const findById = async (id) => {
   const category = await prisma.vehicleCategory.findUnique({ where: { id }, select: SELECT });
   return mapCategory(category);
@@ -99,6 +108,7 @@ const deleteById = async (id) => {
 
 export default {
   search,
+  getAll,
   findById,
   findByName,
   create,

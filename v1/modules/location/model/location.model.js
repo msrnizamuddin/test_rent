@@ -51,6 +51,15 @@ const search = async ({ search: searchTerm, city, type, isActive }) => {
   return locations.map(mapLocation);
 };
 
+// Safe "get everything" — no where clause at all.
+const getAll = async () => {
+  const locations = await prisma.location.findMany({
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+  return locations.map(mapLocation);
+};
+
 const findById = async (id) => {
   const location = await prisma.location.findUnique({ where: { id }, select: SELECT });
   return mapLocation(location);
@@ -113,6 +122,7 @@ const deleteById = async (id) => {
 
 export default {
   search,
+  getAll,
   findById,
   create,
   updateById,

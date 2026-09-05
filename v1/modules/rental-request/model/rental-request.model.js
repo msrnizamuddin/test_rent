@@ -166,6 +166,15 @@ const updateById = async (id, payload) => {
   }
 };
 
+// Safe "get everything" — no where clause, no pagination.
+const getAll = async () => {
+  const rentalRequests = await prisma.rentalRequest.findMany({
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+  return rentalRequests.map(mapRentalRequest);
+};
+
 // Double-booking guard against other *rental requests* that already hold a
 // claim on this vehicle/driver (mirrors trip.model's vehicleHasOverlap /
 // driverHasOverlap, which covers the trips table once a trip exists).
@@ -201,6 +210,7 @@ export default {
   findById,
   findMineByCustomer,
   findAll,
+  getAll,
   updateById,
   vehicleHasOverlap,
   driverHasOverlap,

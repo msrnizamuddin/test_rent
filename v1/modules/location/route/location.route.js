@@ -16,6 +16,9 @@ import {
 
 const router = express.Router();
 
+// Safe "get everything" — no filters, no conditions.
+router.get("/all", controller.getAll);
+
 router.get(
   "/",
   validate(searchLocationValidation, "query"),

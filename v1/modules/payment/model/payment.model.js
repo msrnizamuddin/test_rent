@@ -79,6 +79,15 @@ const search = async ({ status, method, customerId, page, limit }) => {
   return { payments: payments.map(mapPayment), total };
 };
 
+// Safe "get everything" — no where clause, no pagination.
+const getAll = async () => {
+  const payments = await prisma.payment.findMany({
+    select: SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+  return payments.map(mapPayment);
+};
+
 const updateStatus = async (id, { status, transactionId }) => {
   const data = { status };
   if (transactionId !== undefined) data.transactionId = transactionId;
@@ -138,6 +147,7 @@ export default {
   findByTripId,
   findByCustomerId,
   search,
+  getAll,
   updateStatus,
   sumPaidByTripId,
   findTripById,

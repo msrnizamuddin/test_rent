@@ -47,6 +47,9 @@ router.get(
   controller.listRentalRequests,
 );
 
+// Safe "get everything" — no filters, no conditions.
+router.get("/all", authenticate, authorize("superadmin", "manager"), controller.getAll);
+
 // ---------------- 13. Admin: Assign Vehicle / Driver ----------------
 router.patch(
   "/:requestId/assign-vehicle",

@@ -76,12 +76,17 @@ const deleteReview = async (reviewId) => {
   return { deleted: true };
 };
 
+// Safe "get everything" — no filters, no conditions. Includes hidden reviews,
+// so this stays staff-only (see route) rather than public like /driver/:id.
+const getAll = async () => Review.getAll();
+
 export default {
   createReview,
   getMyReviews,
   getDriverReviews,
   getVehicleReviews,
   getAllReviews,
+  getAll,
   hideReview,
   unhideReview,
   deleteReview,

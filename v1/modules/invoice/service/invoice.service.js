@@ -136,10 +136,14 @@ const getMyInvoices = async (customerId) => {
   return Invoice.findByCustomerId(customerId);
 };
 
+// Safe "get everything" — no filters, no conditions.
+const getAll = async () => Invoice.getAll();
+
 export default {
   generateInvoice,
   getInvoiceByTripId,
   getInvoiceById,
   listInvoices,
   getMyInvoices,
+  getAll,
 };

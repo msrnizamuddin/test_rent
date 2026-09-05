@@ -10,6 +10,9 @@ const searchLocations = async (query) => {
   return Location.search(query);
 };
 
+// Safe "get everything" — no filters, no conditions.
+const getAll = async () => Location.getAll();
+
 const getLocationById = async (locationId) => {
   const location = await Location.findById(locationId);
   if (!location) throw buildError("Location not found", 404);
@@ -34,6 +37,7 @@ const deleteLocation = async (locationId) => {
 
 export default {
   searchLocations,
+  getAll,
   getLocationById,
   createLocation,
   updateLocation,

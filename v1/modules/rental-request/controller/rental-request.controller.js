@@ -45,6 +45,12 @@ export const listRentalRequests = handle(async (req) => {
   return { message: "Rental requests fetched successfully", data };
 });
 
+// Safe "get everything" — no filters, no conditions.
+export const getAll = handle(async () => {
+  const data = await rentalRequestService.getAll();
+  return { message: "All rental requests fetched successfully", data };
+});
+
 export const reviewRentalRequest = handle(async (req) => {
   const data = await rentalRequestService.reviewRentalRequest(req.params.requestId, req.body);
   return { message: "Rental request reviewed successfully", data };

@@ -45,6 +45,9 @@ router.get(
   controller.listTrips,
 );
 
+// Safe "get everything" — no filters, no conditions.
+router.get("/all", authenticate, authorize("superadmin", "manager"), controller.getAll);
+
 // ---------------- 15. Driver: Status Transitions ----------------
 router.patch(
   "/:tripId/driver-action",

@@ -13,6 +13,9 @@ import { authenticate, authorize } from "../../../middleware/authenticate.middle
 
 const router = express.Router();
 
+// Safe "get everything" — no filters, no conditions.
+router.get("/all", authenticate, authorize("superadmin", "manager"), controller.getAll);
+
 router.post(
   "/generate",
   authenticate,
