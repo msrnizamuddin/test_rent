@@ -200,7 +200,12 @@ reply, and close tickets.
 ### 28. Reports & Analytics Module 🛡️
 Aggregate numbers across users, vehicles, drivers, trips, and finances —
 most-rented vehicles, per-driver earnings, daily/monthly/yearly revenue,
-and so on. Pure panel reporting; nothing customer-facing.
+and so on. Pure panel reporting; nothing customer-facing. Deliberately its
+own `report` module rather than folded into Module 6's `dashboard` — the
+two look similar (both are read-only aggregates) but grow differently:
+the dashboard stays a fixed landing-page summary, while reports is where
+date-range filters, CSV export, and per-manager "Assigned" scoping (see
+Module 32) will eventually live.
 
 ### 29. Super Admin Settings Module 🛡️
 Site-wide configuration — website name/logo, currency, tax rate,

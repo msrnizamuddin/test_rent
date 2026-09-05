@@ -18,29 +18,3 @@ export const getOverviewStats = handle(async () => {
   const data = await dashboardService.getOverviewStats();
   return { message: "Dashboard stats fetched successfully", data };
 });
-
-// ---------------- 28. Reports & Analytics ----------------
-export const getUserReport = handle(async () => {
-  const data = await dashboardService.getUserReport();
-  return { message: "User report fetched successfully", data };
-});
-
-export const getVehicleReport = handle(async () => {
-  const data = await dashboardService.getVehicleReport();
-  return { message: "Vehicle report fetched successfully", data };
-});
-
-export const getDriverReport = handle(async () => {
-  const data = await dashboardService.getDriverReport();
-  return { message: "Driver report fetched successfully", data };
-});
-
-export const getTripReport = handle(async () => {
-  const data = await dashboardService.getTripReport();
-  return { message: "Trip report fetched successfully", data };
-});
-
-export const getFinancialReport = handle(async () => {
-  const data = await dashboardService.getFinancialReport();
-  return { message: "Financial report fetched successfully", data };
-});

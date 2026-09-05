@@ -8,18 +8,9 @@ import {
 
 const router = express.Router();
 
-// Dashboard/reports are Super Admin / Manager territory — this whole
-// module is the superadmin panel's analytics surface.
+// Dashboard is Super Admin / Manager territory — spec module 6.1.
 router.use(authenticate, authorize("superadmin", "manager"));
 
-// ---------------- 6.1 Super Admin Dashboard ----------------
 router.get("/stats", controller.getOverviewStats);
-
-// ---------------- 28. Reports & Analytics ----------------
-router.get("/reports/users", controller.getUserReport);
-router.get("/reports/vehicles", controller.getVehicleReport);
-router.get("/reports/drivers", controller.getDriverReport);
-router.get("/reports/trips", controller.getTripReport);
-router.get("/reports/financial", controller.getFinancialReport);
 
 export default router;

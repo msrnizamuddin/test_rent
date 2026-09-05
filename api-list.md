@@ -284,20 +284,31 @@ Spec module 29 (General/Business/Notification settings only — Role & Permissio
 
 ---
 
-## 16. Dashboard & Reports (`/dashboard`) — `/web` only
+## 16a. Dashboard (`/dashboard`) — `/web` only
 
-Spec modules 6.1 (Super Admin Dashboard) and 28 (Reports & Analytics). **Superadmin/manager only.**
+Spec module 6.1 (Super Admin Dashboard). **Superadmin/manager only.**
 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/stats` | Overview: totalUsers, totalVehicles, totalDrivers, totalManagers, pendingVehicleRequests, pendingDriverRequests, pendingRentalRequests, confirmedRentals, activeTrips, completedTrips, cancelledTrips, totalRevenue, todaysTrips, upcomingTrips, recentRequests (last 10). |
-| GET | `/reports/users` | totalUsers, activeUsers, newUsersLast30Days. |
-| GET | `/reports/vehicles` | totalVehicles, availableVehicles, rentedVehicles, maintenanceVehicles, mostRentedVehicles (top 5 by trip count). |
-| GET | `/reports/drivers` | totalDrivers, activeDrivers, availableDrivers, assignedDrivers, driverEarnings (per-driver completed-trip count + total earnings). |
-| GET | `/reports/trips` | totalTrips, singleTrips, roundTrips, downTrips, completedTrips, cancelledTrips, pendingTrips. |
-| GET | `/reports/financial` | totalRevenue, totalRefunded, dailyRevenue (24h), monthlyRevenue (30d), yearlyRevenue (365d). |
 
-No write endpoints — this module only reads and aggregates data owned by other modules.
+Kept as its own module, separate from Reports — it's the lightweight landing-page summary, not the drill-down analytics.
+
+---
+
+## 16b. Report (`/report`) — `/web` only
+
+Spec module 28 (Reports & Analytics). **Superadmin/manager only.** Deliberately a separate module from Dashboard (16a) — different growth path (pagination, date-range filters, CSV export, per-manager "Assigned" scoping per spec module 32's permission table), so it shouldn't be coupled to the dashboard's simpler overview endpoint.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/users` | totalUsers, activeUsers, newUsersLast30Days. |
+| GET | `/vehicles` | totalVehicles, availableVehicles, rentedVehicles, maintenanceVehicles, mostRentedVehicles (top 5 by trip count). |
+| GET | `/drivers` | totalDrivers, activeDrivers, availableDrivers, assignedDrivers, driverEarnings (per-driver completed-trip count + total earnings). |
+| GET | `/trips` | totalTrips, singleTrips, roundTrips, downTrips, completedTrips, cancelledTrips, pendingTrips. |
+| GET | `/financial` | totalRevenue, totalRefunded, dailyRevenue (24h), monthlyRevenue (30d), yearlyRevenue (365d). |
+
+No write endpoints on either module — both only read and aggregate data owned by other modules.
 
 ---
 
