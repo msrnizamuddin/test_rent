@@ -312,7 +312,27 @@ Spec module 30 (Audit Log / Admin Activity Log). **Superadmin only.**
 
 Fields per row: `actorId, action, entityType, entityId, metadata (json), ipAddress, createdAt`.
 
-**Not wired up yet** — the model exposes a `recordAuditLog({ actorId, action, entityType, entityId, metadata, ipAddress })` helper (`v1/modules/audit-log/service/audit-log.service.js`), but no other module calls it yet. Wire it into admin-facing mutations (vehicle approval, account control, rental-request review/confirm/reject, etc.) during the superadmin-panel integration pass if a real audit trail is wanted — right now `GET /all` will return `[]` on a fresh install.
+**Wired into login** — `auth.service.login` records `login.success`, `login.failed`, `login.blocked` (account inactive/suspended/blocked), and `account.auto_locked` (5 consecutive failed attempts trips `centralStatus -> suspended`) on every attempt. The model also exposes a `recordAuditLog({ actorId, action, entityType, entityId, metadata, ipAddress })` helper (`v1/modules/audit-log/service/audit-log.service.js`) for other modules to call — nothing else calls it yet (vehicle approval, account control, rental-request review/confirm/reject are still silent). Wire those in during the superadmin-panel integration pass if a fuller audit trail is wanted.
+
+---
+
+## 18. Document (`/document`) — `/web` + `/app`
+
+Spec module 25 (Document Management) — per-file upload/verify/reject, distinct from the flexible `documents: Json[]` blob still on `User`/`Vehicle` rows (that blob has no per-file status and is left as-is).
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| POST | `/` | any | `{ category, fileUrl, expiryDate?, ownerType?, ownerId? }`. Omitting `ownerType` uploads against the caller's own account (`ownerType: "user"`); `ownerType: "vehicle"` requires `ownerId` and is blocked for `customer` role. |
+| GET | `/mine` | any | Own uploaded documents. |
+| GET | `/all` | superadmin, manager | Every document, no filters. |
+| GET | `/` | superadmin, manager | `?ownerType=&ownerId=&status=&category=` |
+| GET | `/owner/:ownerType/:ownerId` | superadmin, manager | All documents for one user or vehicle. |
+| PATCH | `/:documentId/verify` | superadmin, manager | |
+| PATCH | `/:documentId/reject` | superadmin, manager | `{ rejectionReason }` |
+| DELETE | `/:documentId` | superadmin, manager | |
+| GET | `/:documentId` | any | |
+
+Status enum: `pending, verified, rejected`. `category` is a free string (e.g. `nid, passport, driving_license, registration, fitness_certificate, insurance, tax_token, other`) — not enum-constrained, so the frontend/panel decide the exact category list per owner type.
 
 ---
 
@@ -321,13 +341,12 @@ Fields per row: `actorId, action, entityType, entityId, metadata (json), ipAddre
 - **Module 6 (Super Admin Module)** → `/dashboard`.
 - **Module 8 (Driver Management)** → driver entry is `/auth/staff`, approval/status is `/auth/account/:userId` (`driverStatus`).
 - **Module 9 (Manager/Admin)** → manager entry is `/auth/staff`, permissions are `User.permissions` (json), edited via `/auth/account/:userId`.
-- **Module 23 (Cancellation)** → pre-confirmation: `/rental-request/:id/cancel`. Post-confirmation: `/trip/:id/cancel`.
-- **Module 25 (Document Management)** → documents are a flexible `documents: Json[]` field on `User`/`Vehicle` rows (uploaded via profile/vehicle endpoints). There is **no dedicated verify/reject-per-document workflow** — add one (a `Document` table with a `status` column) if the superadmin panel needs to approve individual uploaded files rather than the whole record.
-- **Module 30 (Security & Audit)**, partially → login history / failed-login tracking already exist as `User.lastLoginAt`, `User.lastLoginIp`, `User.failedLoginAttempts`. The `audit-log` module above adds the general admin-activity-log piece, not yet wired into other modules' mutations.
+- **Module 23 (Cancellation)** → pre-confirmation: `/rental-request/:id/cancel` (now wired into the customer frontend, see `rent_a_car`'s order detail page). Post-confirmation: `/trip/:id/cancel`.
+- **Module 30 (Security & Audit)** → Role-Based Access Control is `authenticate`/`authorize` middleware everywhere; Password Hashing is bcrypt in `auth.model.js`; OTP Verification is the `/auth/verify-otp` flow; Login History / Failed Login Tracking / Account Blocking are the audit-log wiring described in Module 17 above; API Authentication is JWT via `authenticate`. Not built: a literal "Secure Document Access" gate beyond normal auth (documents are plain `fileUrl` strings — add signed/expiring URLs if documents shouldn't be link-shareable).
 
 ## Known follow-ups before superadmin-panel integration
 
 1. Set a real `GOOGLE_MAPS_API_KEY` in `.env` (Places + Geocoding + Distance Matrix enabled).
 2. Decide whether `/auth/users` needs a literal `/auth/users/all` (unconditioned) alongside the existing paginated version, for consistency with every other module.
-3. Wire `recordAuditLog` into the admin mutation endpoints that should actually be audited.
-4. If per-document verification is required, add a `Document` model (see Module 25 note above) instead of the current flexible JSON blob.
+3. Wire `recordAuditLog` into more admin mutation endpoints (vehicle approval, account control, rental-request review/confirm/reject) if a fuller audit trail is wanted beyond login events.
+4. Documents are stored as plain URLs (`fileUrl`) — add signed/expiring URLs if uploaded documents (NID, licenses, etc.) shouldn't be accessible to anyone with the link.
