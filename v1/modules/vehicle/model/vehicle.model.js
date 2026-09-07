@@ -91,9 +91,9 @@ const search = async ({
 
   if (location) {
     where.OR = (where.OR || []).concat([
-      { location: { path: ["city"], string_contains: location } },
-      { location: { path: ["district"], string_contains: location } },
-      { location: { path: ["address"], string_contains: location } },
+      { location: { path: ["city"], string_contains: location, mode: "insensitive" } },
+      { location: { path: ["district"], string_contains: location, mode: "insensitive" } },
+      { location: { path: ["address"], string_contains: location, mode: "insensitive" } },
     ]);
   }
 
