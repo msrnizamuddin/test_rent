@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
+import { prisma } from "../../config/db.js";
 
-export const authenticate = (req, res, next) => {
+export const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.startsWith("Bearer ")
     ? authHeader.split(" ")[1]
@@ -12,14 +13,38 @@ export const authenticate = (req, res, next) => {
       .json({ success: false, message: "No token provided" });
   }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { id, role }
-    next();
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (err) {
     return res
       .status(401)
       .json({ success: false, message: "Invalid or expired token" });
+  }
+
+  // A signature-valid token can still point at a user that no longer
+  // exists (e.g. the DB was reset/reseeded while a browser held onto an
+  // old token) or one that's since been suspended/blocked. Trusting the
+  // JWT payload alone let such a request sail through authenticate() and
+  // fail much later as a raw foreign-key-violation 500 wherever req.user.id
+  // got used (e.g. rental-request creation) — check the account is still
+  // real and active here instead, so a stale session gets a clean 401.
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, role: true, centralStatus: true },
+    });
+
+    if (!user || user.centralStatus !== "active") {
+      return res
+        .status(401)
+        .json({ success: false, message: "Session is no longer valid, please log in again" });
+    }
+
+    req.user = { id: user.id, role: user.role };
+    next();
+  } catch (err) {
+    next(err);
   }
 };
 
