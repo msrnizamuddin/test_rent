@@ -137,7 +137,7 @@ minibus, bus, pickup, van, coaster, other`.
   "registrationNumber": "DHA-1234",
   "modelYear": 2021,
   "seatingCapacity": 5,
-  "fuelType": "petrol",
+  "fuelType": ["petrol"],
   "transmission": "automatic",
   "isAC": true,
   "location": { "city": "Dhaka" },
@@ -156,7 +156,7 @@ minibus, bus, pickup, van, coaster, other`.
   "registrationNumber": "DHA-5678",
   "modelYear": 2022,
   "seatingCapacity": 7,
-  "fuelType": "diesel",
+  "fuelType": ["diesel"],
   "transmission": "automatic",
   "isAC": true,
   "location": { "city": "Chattogram" },
@@ -175,7 +175,7 @@ minibus, bus, pickup, van, coaster, other`.
   "registrationNumber": "DHA-9012",
   "modelYear": 2020,
   "seatingCapacity": 8,
-  "fuelType": "petrol",
+  "fuelType": ["petrol"],
   "transmission": "automatic",
   "isAC": true,
   "location": { "city": "Sylhet" },
@@ -198,7 +198,7 @@ function New-Vehicle($name, $brand, $model, $categoryId, $vehicleType, $regNo, $
     registrationNumber = $regNo
     modelYear = $year
     seatingCapacity = $seats
-    fuelType = $fuel
+    fuelType = @($fuel)  # array — a vehicle can have more than one fuel type now
     transmission = $transmission
     isAC = $true
     location = @{ city = $city }
@@ -265,6 +265,11 @@ superadmin creates one (this is intentional, matches spec module 8).
 }
 ```
 - Note the response's `data.id` — that's the driver's user ID, needed below.
+- `fatherName`, `motherName`, `dateOfBirth`, and NID (`identification: { type: "nid",
+  number }`) are all optional here too — add them the same way as the vehicle fields
+  above if you want a fully-filled-in test driver. See API_LIST.md §1.15 for the full
+  shape, and §11 (Document Module) for uploading the driver's NID/license images and
+  attaching them via §1.17a (`PATCH /auth/web/users/:userId`).
 
 **PowerShell:**
 ```powershell
@@ -312,6 +317,27 @@ curl.exe -s -X PATCH "http://localhost:8000/api/v1/auth/web/account/<driverId>" 
 
 You can now log in as this driver on the website at `/driver-login` with
 `01811112222` / `password123`.
+
+**Assign this driver to one of the vehicles from step 3** (the persistent
+fleet-level "this driver drives this car" pairing — separate from any
+specific booking):
+
+**Postman:** `PATCH http://localhost:8000/api/v1/vehicle/web/<vehicleId>`
+```json
+{ "assignedDriverId": "PASTE_DRIVER_ID_FROM_ABOVE" }
+```
+
+**PowerShell:**
+```powershell
+$body = @{ assignedDriverId = $driverId } | ConvertTo-Json
+curl.exe -s -X PATCH "http://localhost:8000/api/v1/vehicle/web/<vehicleId>" `
+  -H "Content-Type: application/json" -H "Authorization: Bearer $token" -d $body
+```
+
+A driver can only be assigned to one vehicle at a time — assigning them to a second
+vehicle while already assigned returns `409 Conflict`. Unassign first with
+`{ "assignedDriverId": null }`, or see API_LIST.md §4 Step 4 for the full behavior
+(including `ownerDriverId` for a driver's own personally-owned vehicle).
 
 ---
 

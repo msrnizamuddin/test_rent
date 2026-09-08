@@ -61,6 +61,7 @@ model User {
   vehiclesCreated  Vehicle[] @relation("VehicleCreatedBy")
   vehiclesUpdated  Vehicle[] @relation("VehicleUpdatedBy")
   vehiclesAssigned Vehicle[] @relation("VehicleAssignedDriver")
+  vehiclesOwned    Vehicle[] @relation("VehicleOwnerDriver")
 
   rentalRequestsAsCustomer RentalRequest[] @relation("RentalRequestCustomer")
   rentalRequestsAsDriver   RentalRequest[] @relation("RentalRequestDriver")
@@ -161,7 +162,7 @@ model Vehicle {
   registrationNumber  String                    @unique @map("registration_number")
   modelYear           Int                       @map("model_year")
   seatingCapacity     Int                       @map("seating_capacity")
-  fuelType            FuelType                  @map("fuel_type")
+  fuelType            FuelType[]                @map("fuel_type")
   transmission        Transmission
   isAC                Boolean                   @default(true) @map("is_ac")
   features            String[]                  @default([])
@@ -175,9 +176,18 @@ model Vehicle {
 
   // Persistent driver assignment (typical rental-fleet "this driver drives
   // this car" pairing) — distinct from RentalRequest's per-trip
-  // assignedVehicleId/assignedDriverId, which is trip-scoped.
+  // assignedVehicleId/assignedDriverId, which is trip-scoped. A driver can
+  // only be the assignedDriver of one vehicle at a time (enforced in
+  // vehicle.service.js, not at the DB level).
   assignedDriverId String? @map("assigned_driver_id") @db.Uuid
   assignedDriver   User?   @relation("VehicleAssignedDriver", fields: [assignedDriverId], references: [id], onDelete: SetNull)
+
+  // Set when a driver brings their own car rather than this being a company
+  // fleet vehicle any admin can assign to any driver. A driver-owned vehicle
+  // is still assigned via assignedDriverId (normally to the same driver) —
+  // this field only records who personally owns it.
+  ownerDriverId String? @map("owner_driver_id") @db.Uuid
+  ownerDriver   User?   @relation("VehicleOwnerDriver", fields: [ownerDriverId], references: [id], onDelete: SetNull)
 
   createdById String? @map("created_by") @db.Uuid
   createdBy   User?   @relation("VehicleCreatedBy", fields: [createdById], references: [id])
@@ -196,6 +206,7 @@ model Vehicle {
   @@index([vehicleType])
   @@index([availabilityStatus])
   @@index([assignedDriverId])
+  @@index([ownerDriverId])
   @@map("vehicles")
 }
 

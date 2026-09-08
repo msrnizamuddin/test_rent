@@ -299,6 +299,9 @@ save it for the next step.
 {
   "role": "driver",
   "fullName": "Kamal Uddin",
+  "fatherName": "Abdul Karim",
+  "motherName": "Rahima Begum",
+  "dateOfBirth": "1990-05-20",
   "mobileNumber": "01812345678",
   "email": "kamal@example.com",
   "password": "password123",
@@ -313,10 +316,12 @@ save it for the next step.
     "number": "DL-123456",
     "issueDate": "2020-01-01",
     "expiryDate": "2030-01-01"
-  }
+  },
+  "profilePicture": "https://res.cloudinary.com/.../avatar.jpg"
 }
 ```
-(`drivingLicense` is required when `role` is `"driver"`.)
+(`drivingLicense.number` is required when `role` is `"driver"`. `fatherName`, `motherName`,
+`dateOfBirth`, and `profilePicture` are all optional.)
 
 **Create a Manager**
 ```json
@@ -359,6 +364,53 @@ GET /users?role=customer&search=rakib&page=1&limit=20
 
 **Endpoint:** `GET /users/:userId`
 **Authentication:** ✅ `TOKEN_ADMIN`
+
+---
+
+### 1.17a Update User (Full Profile Edit)
+
+**Endpoint:** `PATCH /users/:userId`
+**Authentication:** ✅ `TOKEN_ADMIN` (superadmin or manager only)
+
+Lets an admin edit any user's personal/document details directly — distinct from
+§1.6 `updateProfile` (self-service only) and §1.18 below (role/status only, not
+personal details). Every field is optional; send just what changed.
+```json
+{
+  "fullName": "Kamal Uddin",
+  "fatherName": "Abdul Karim",
+  "motherName": "Rahima Begum",
+  "dateOfBirth": "1990-05-20",
+  "email": "kamal@example.com",
+  "mobileNumber": "01812345678",
+  "address": {
+    "presentAddress": "Agrabad, Chattogram",
+    "permanentAddress": "Agrabad, Chattogram",
+    "city": "Chattogram",
+    "district": "Chattogram",
+    "postCode": "4100",
+    "country": "Bangladesh"
+  },
+  "identification": {
+    "type": "nid",
+    "number": "9876543210123",
+    "frontImage": "https://res.cloudinary.com/.../nid-front.jpg",
+    "backImage": "https://res.cloudinary.com/.../nid-back.jpg",
+    "expiryDate": "2030-01-01"
+  },
+  "drivingLicense": {
+    "number": "DL-123456",
+    "issueDate": "2020-01-01",
+    "expiryDate": "2030-01-01",
+    "frontImage": "https://res.cloudinary.com/.../dl-front.jpg",
+    "backImage": "https://res.cloudinary.com/.../dl-back.jpg"
+  },
+  "profilePicture": "https://res.cloudinary.com/.../avatar.jpg"
+}
+```
+`identification.type` is `"nid"` \| `"passport"`. Pair with the Document module
+(§11) — upload the images there first, then put the returned `fileUrl` into
+`frontImage`/`backImage`/`profilePicture` here.
 
 ---
 
@@ -506,7 +558,7 @@ http://localhost:8000/api/v1/vehicle/{web|app}
 | `minPrice` / `maxPrice` | Number | Per-day rate range |
 | `isAC` | Boolean | AC availability |
 | `transmission` | String | `manual` \| `automatic` |
-| `fuelType` | String | `petrol`, `diesel`, `cng`, `electric`, `hybrid` |
+| `fuelType` | String or String[] | `petrol`, `diesel`, `cng`, `electric`, `hybrid` — a vehicle can have more than one (e.g. hybrid + electric); pass once for a single value or repeat the param (`fuelType=petrol&fuelType=diesel`) to match ANY of several |
 | `availability` | String | `available`, `assigned`, `on-trip`, `maintenance` |
 | `page` / `limit` | Number | Pagination |
 | `sortBy` | String | `modelYear` \| `createdAt` (price sort not supported — see note below) |
@@ -515,7 +567,7 @@ http://localhost:8000/api/v1/vehicle/{web|app}
 ```
 GET /?search=corolla&brand=toyota&categoryId=<uuid>&location=dhaka&vehicleType=sedan
     &seatingCapacity=4&minPrice=1000&maxPrice=5000&isAC=true&transmission=automatic
-    &fuelType=petrol&availability=available&page=1&limit=20&sortBy=createdAt&sortOrder=desc
+    &fuelType=petrol&fuelType=diesel&availability=available&page=1&limit=20&sortBy=createdAt&sortOrder=desc
 ```
 
 > Note: `sortBy=estimatedRentalRate.perDay` from the old docs is no longer supported —
@@ -550,7 +602,7 @@ GET /f7d642a1-471a-44cb-a2db-9c2a3fcffdb3
   "registrationNumber": "DHAKA-METRO-GA-1234",
   "modelYear": 2022,
   "seatingCapacity": 4,
-  "fuelType": "petrol",
+  "fuelType": ["petrol"],
   "transmission": "automatic",
   "isAC": true,
   "color": "White",
@@ -567,8 +619,19 @@ GET /f7d642a1-471a-44cb-a2db-9c2a3fcffdb3
 > pass its `id` here — the old free-text `category` field no longer exists; categories
 > are now a real table with a foreign key.
 
+> **`fuelType` is an array**, not a single string — a vehicle can support more than one
+> fuel type (e.g. `["hybrid", "electric"]`). At least one value required.
+
+> **`location` and `estimatedRentalRate` are both optional** — omit either (or both) and
+> fill them in later via Step 4.
+
 If `availabilityStatus` is omitted, `"pending"` is applied automatically, and the
 vehicle won't appear in public browsing (§ Step 1) until it's changed to `available`.
+
+**Driver-owned vehicle:** to register a vehicle a driver personally brought (rather than
+a company fleet vehicle), pass `ownerDriverId` (must be an existing user with
+`role: "driver"`). Unless `assignedDriverId` is also given, the vehicle is automatically
+assigned to its owner. See the assignment note under Step 4.
 
 ---
 
@@ -579,7 +642,20 @@ vehicle won't appear in public browsing (§ Step 1) until it's changed to `avail
 ```json
 { "estimatedRentalRate": { "perDay": 4000 }, "availabilityStatus": "available" }
 ```
-At least one field required.
+At least one field required. Same body shape as Step 3 (all fields optional here).
+
+**Fleet-level driver assignment** — separate from RentalRequest's per-trip assignment;
+this is the persistent "this driver drives this car" pairing:
+```json
+{ "assignedDriverId": "<driver's user id>" }
+```
+Pass `"assignedDriverId": null` to unassign. A driver can only be the `assignedDriver` of
+**one vehicle at a time** — assigning a driver who's already assigned elsewhere is
+rejected with `409 Conflict` ("This driver is already assigned to `<vehicle>`
+(`<registration>`). Unassign it first.") rather than silently moving the assignment.
+
+**Ownership** — `ownerDriverId` can likewise be set (must reference a `role: "driver"`
+user) or cleared with `null`.
 
 ---
 
@@ -839,6 +915,66 @@ returns **409**.
 
 ---
 
+## 11. Document Module
+
+Backs identity/license documents on a user and photos/paperwork on a vehicle — same
+Cloudinary integration used by `profilePicture` elsewhere.
+
+### Base URL
+```
+http://localhost:8000/api/v1/document/{web|app}
+```
+
+### Upload a file
+
+**Endpoint:** `POST /upload`
+**Authentication:** ✅ Any authenticated token
+**Content-Type:** `multipart/form-data`
+
+| Field | Required | Description |
+|---|---|---|
+| `file` | ✅ | The binary file |
+| `ownerType` | Only for vehicle docs | `"user"` \| `"vehicle"` — omit for "my own document" uploads made while creating a record whose id isn't known yet (e.g. a new driver's NID before the user exists) |
+| `ownerId` | Only if `ownerType` is `"vehicle"` | UUID of the vehicle |
+| `category` | ✅ | Free string — use `nid`, `passport`, `driving_license` for driver docs; `vehicle_photo`, `registration_copy`, `tax_token`, `fitness_certificate` for vehicle docs |
+| `expiryDate` | ❌ | ISO date |
+
+```
+POST /document/web/upload
+Content-Type: multipart/form-data
+
+file=<binary>
+ownerType=vehicle
+ownerId=f7d642a1-471a-44cb-a2db-9c2a3fcffdb3
+category=registration_copy
+```
+
+Response `data` includes the created Document record's `fileUrl` (the Cloudinary URL).
+
+### Record a document you already have a URL for
+
+**Endpoint:** `POST /`
+**Authentication:** ✅ Any authenticated token
+```json
+{ "ownerType": "vehicle", "ownerId": "<vehicle id>", "category": "tax_token", "fileUrl": "https://res.cloudinary.com/.../tax-token.jpg" }
+```
+Same field rules as `/upload`, minus the file — you provide `fileUrl` directly.
+
+### Other endpoints
+
+| Endpoint | Description |
+|---|---|
+| `GET /mine` | Documents you uploaded for yourself (no `ownerType`/`ownerId` set) |
+| `GET /all` | Every document (superadmin/manager) |
+| `GET /?ownerType=&ownerId=&status=&category=` | Filtered search (superadmin/manager) |
+| `GET /owner/:ownerType/:ownerId` | All documents for one owner (superadmin/manager) |
+| `GET /:documentId` | Get one document |
+| `PATCH /:documentId/verify` | Mark verified (superadmin/manager) |
+| `PATCH /:documentId/reject` | Reject with `{ "rejectionReason": "..." }` (superadmin/manager) |
+| `DELETE /:documentId` | Delete (superadmin/manager) |
+
+---
+
 ## 📋 Complete API Endpoint Summary
 
 Every row below exists under both `/web` and `/app`.
@@ -867,7 +1003,23 @@ Every row below exists under both `/web` and `/app`.
 | POST | `/staff` | TOKEN_ADMIN | Create driver/manager/superadmin |
 | GET | `/users` | TOKEN_ADMIN | List users |
 | GET | `/users/:userId` | TOKEN_ADMIN | Get user |
+| PATCH | `/users/:userId` | TOKEN_ADMIN (superadmin/manager) | Full profile edit for any user |
 | PATCH | `/account/:userId` | TOKEN_ADMIN | Manage account status/role/permissions |
+
+### Document — `/api/v1/document`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/` | Authenticated | Record a document you already have a `fileUrl` for |
+| POST | `/upload` | Authenticated | Upload a file (multipart) to Cloudinary and record it |
+| GET | `/mine` | Authenticated | My own documents |
+| GET | `/all` | TOKEN_ADMIN | List every document |
+| GET | `/` | TOKEN_ADMIN | Search documents (`?ownerType=&ownerId=&status=&category=`) |
+| GET | `/owner/:ownerType/:ownerId` | TOKEN_ADMIN | All documents for one owner |
+| GET | `/:documentId` | Authenticated | Get one document |
+| PATCH | `/:documentId/verify` | TOKEN_ADMIN | Mark a document verified |
+| PATCH | `/:documentId/reject` | TOKEN_ADMIN | Reject a document (`rejectionReason` required) |
+| DELETE | `/:documentId` | TOKEN_ADMIN | Delete a document |
 
 ### Vehicle Category — `/api/v1/vehicle-category`
 

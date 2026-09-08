@@ -43,6 +43,7 @@ const SELECT = {
   ownerInfo: true,
   documents: true,
   assignedDriverId: true,
+  ownerDriverId: true,
   createdById: true,
   updatedById: true,
   createdAt: true,
@@ -88,7 +89,9 @@ const search = async ({
   if (seatingCapacity) where.seatingCapacity = { gte: seatingCapacity };
   if (typeof isAC === "boolean") where.isAC = isAC;
   if (transmission) where.transmission = transmission;
-  if (fuelType) where.fuelType = fuelType;
+  if (fuelType) {
+    where.fuelType = { hasSome: Array.isArray(fuelType) ? fuelType : [fuelType] };
+  }
 
   if (location) {
     where.OR = (where.OR || []).concat([
@@ -181,6 +184,8 @@ const create = async (payload, userId) => {
       driverRequired: payload.driverRequired ?? false,
       ownerInfo: payload.ownerInfo ?? null,
       documents: payload.documents || [],
+      assignedDriverId: payload.assignedDriverId ?? null,
+      ownerDriverId: payload.ownerDriverId ?? null,
       createdById: userId,
     },
     select: SELECT,
@@ -213,6 +218,7 @@ const FIELD_MAP = {
   ownerInfo: "ownerInfo",
   documents: "documents",
   assignedDriverId: "assignedDriverId",
+  ownerDriverId: "ownerDriverId",
   updatedBy: "updatedById",
 };
 
@@ -233,6 +239,20 @@ const updateById = async (id, payload) => {
   }
 };
 
+const findDriverById = async (id) =>
+  prisma.user.findFirst({ where: { id, role: "driver" }, select: { id: true } });
+
+// The other vehicle (if any) this driver is already the assignedDriver of —
+// a driver can only be actively assigned to one vehicle at a time.
+const findActiveAssignmentForDriver = async (driverId, excludeVehicleId) =>
+  prisma.vehicle.findFirst({
+    where: {
+      assignedDriverId: driverId,
+      ...(excludeVehicleId ? { id: { not: excludeVehicleId } } : {}),
+    },
+    select: { id: true, vehicleName: true, registrationNumber: true },
+  });
+
 const deleteById = async (id) => {
   try {
     return await prisma.vehicle.delete({ where: { id }, select: { id: true } });
@@ -248,6 +268,8 @@ export default {
   findPubliclyVisibleById,
   findById,
   findByRegistrationNumber,
+  findDriverById,
+  findActiveAssignmentForDriver,
   create,
   updateById,
   deleteById,
