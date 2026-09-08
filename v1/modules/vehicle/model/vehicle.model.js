@@ -42,6 +42,7 @@ const SELECT = {
   driverRequired: true,
   ownerInfo: true,
   documents: true,
+  assignedDriverId: true,
   createdById: true,
   updatedById: true,
   createdAt: true,
@@ -211,6 +212,7 @@ const FIELD_MAP = {
   driverRequired: "driverRequired",
   ownerInfo: "ownerInfo",
   documents: "documents",
+  assignedDriverId: "assignedDriverId",
   updatedBy: "updatedById",
 };
 

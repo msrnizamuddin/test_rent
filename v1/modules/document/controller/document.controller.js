@@ -44,6 +44,11 @@ export const uploadDocument = handle(async (req) => {
   return { statusCode: 201, message: "Document uploaded successfully", data };
 });
 
+export const uploadDocumentFile = handle(async (req) => {
+  const data = await documentService.uploadFile(req.user, req.file, req.body);
+  return { statusCode: 201, message: "Document uploaded successfully", data };
+});
+
 export const verifyDocument = handle(async (req) => {
   const data = await documentService.verify(req.params.documentId, req.user.id);
   return { message: "Document verified successfully", data };

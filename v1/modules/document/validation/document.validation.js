@@ -26,6 +26,16 @@ export const uploadDocumentValidation = Joi.object({
   expiryDate: Joi.date().optional(),
 });
 
+// Multipart form fields arrive as strings (multer doesn't type-coerce), and
+// the file itself is validated separately (req.file, see the controller) —
+// this only covers req.body.
+export const uploadDocumentFileValidation = Joi.object({
+  ownerType: Joi.string().valid("user", "vehicle").optional(),
+  ownerId: objectId.when("ownerType", { is: "vehicle", then: Joi.required(), otherwise: Joi.forbidden() }),
+  category: Joi.string().trim().required(),
+  expiryDate: Joi.date().optional(),
+});
+
 export const rejectDocumentValidation = Joi.object({
   rejectionReason: Joi.string().trim().required(),
 });

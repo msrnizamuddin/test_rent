@@ -6,6 +6,7 @@ import {
   documentIdParamValidation,
   ownerParamValidation,
   uploadDocumentValidation,
+  uploadDocumentFileValidation,
   rejectDocumentValidation,
 } from "../validation/document.validation.js";
 
@@ -14,12 +15,22 @@ import {
   authenticate,
   authorize,
 } from "../../../middleware/authenticate.middleware.js";
+import upload from "../../../utils/multer.js";
 
 const router = express.Router();
 
 router.use(authenticate);
 
 router.post("/", validate(uploadDocumentValidation), controller.uploadDocument);
+// Actually uploads the file (multipart/form-data, field name "file") to
+// Cloudinary and records it — the endpoint above only ever accepted a
+// fileUrl the client already had.
+router.post(
+  "/upload",
+  upload.single("file"),
+  validate(uploadDocumentFileValidation),
+  controller.uploadDocumentFile,
+);
 router.get("/mine", controller.getMyDocuments);
 
 router.get(
