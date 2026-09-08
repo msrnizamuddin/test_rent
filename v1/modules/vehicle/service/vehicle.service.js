@@ -6,6 +6,23 @@ const buildError = (message, statusCode = 400) => {
   return err;
 };
 
+// A driver can only be the assignedDriver of one vehicle at a time — assigning
+// a second one is rejected rather than silently stealing the assignment.
+const assertDriverNotAlreadyAssigned = async (driverId, excludeVehicleId) => {
+  const conflict = await Vehicle.findActiveAssignmentForDriver(driverId, excludeVehicleId);
+  if (conflict) {
+    throw buildError(
+      `This driver is already assigned to ${conflict.vehicleName} (${conflict.registrationNumber}). Unassign it first.`,
+      409,
+    );
+  }
+};
+
+const assertIsDriver = async (driverId, fieldName) => {
+  const driver = await Vehicle.findDriverById(driverId);
+  if (!driver) throw buildError(`${fieldName} must reference an existing driver`, 400);
+};
+
 // ---------------- 2.1 Search + 2.2 Filter (combined) ----------------
 const searchVehicles = async (query) => {
   const { vehicles, total } = await Vehicle.search(query);
@@ -37,8 +54,27 @@ const createVehicle = async (payload, userId) => {
   const existing = await Vehicle.findByRegistrationNumber(payload.registrationNumber);
   if (existing) throw buildError("Registration number already exists", 409);
 
+  if (payload.ownerDriverId) {
+    await assertIsDriver(payload.ownerDriverId, "ownerDriverId");
+  }
+
+  // A driver's own car defaults to being assigned to them, unless the
+  // caller explicitly set a different assignedDriverId.
+  const assignedDriverId = payload.assignedDriverId ?? payload.ownerDriverId ?? null;
+
+  if (assignedDriverId && assignedDriverId !== payload.ownerDriverId) {
+    await assertIsDriver(assignedDriverId, "assignedDriverId");
+  }
+  if (assignedDriverId) {
+    await assertDriverNotAlreadyAssigned(assignedDriverId);
+  }
+
   return Vehicle.create(
-    { ...payload, availabilityStatus: payload.availabilityStatus || "pending" },
+    {
+      ...payload,
+      assignedDriverId,
+      availabilityStatus: payload.availabilityStatus || "pending",
+    },
     userId,
   );
 };
@@ -50,6 +86,15 @@ const updateVehicle = async (vehicleId, payload, userId) => {
       vehicleId,
     );
     if (existing) throw buildError("Registration number already in use", 409);
+  }
+
+  if (payload.ownerDriverId) {
+    await assertIsDriver(payload.ownerDriverId, "ownerDriverId");
+  }
+
+  if (payload.assignedDriverId) {
+    await assertIsDriver(payload.assignedDriverId, "assignedDriverId");
+    await assertDriverNotAlreadyAssigned(payload.assignedDriverId, vehicleId);
   }
 
   const vehicle = await Vehicle.updateById(vehicleId, { ...payload, updatedBy: userId });

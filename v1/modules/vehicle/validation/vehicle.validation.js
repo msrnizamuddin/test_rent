@@ -2,6 +2,10 @@ import Joi from "joi";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 
+// A vehicle can have more than one fuel type (e.g. hybrid + electric).
+const FUEL_TYPES = ["petrol", "diesel", "cng", "electric", "hybrid"];
+const fuelTypeSchema = Joi.array().items(Joi.string().valid(...FUEL_TYPES)).min(1);
+
 // ---------------- 2.1 Vehicle Search + 2.2 Vehicle Filter (combined) ----------------
 // GET /vehicles?search=&brand=&category=&location=&vehicleType=&seatingCapacity=
 //               &minPrice=&maxPrice=&isAC=&transmission=&fuelType=&availability=
@@ -33,8 +37,10 @@ export const searchVehicleValidation = Joi.object({
   maxPrice: Joi.number().min(0).optional(),
   isAC: Joi.boolean().optional(),
   transmission: Joi.string().valid("manual", "automatic").optional(),
-  fuelType: Joi.string()
-    .valid("petrol", "diesel", "cng", "electric", "hybrid")
+  // Query params may arrive as a single value (?fuelType=petrol) or repeated
+  // (?fuelType=petrol&fuelType=diesel) — matches vehicles with ANY of these.
+  fuelType: Joi.alternatives()
+    .try(Joi.string().valid(...FUEL_TYPES), Joi.array().items(Joi.string().valid(...FUEL_TYPES)))
     .optional(),
   availability: Joi.string()
     .valid("available", "assigned", "on-trip", "maintenance")
@@ -102,9 +108,7 @@ export const createVehicleValidation = Joi.object({
     .max(new Date().getFullYear() + 1)
     .required(),
   seatingCapacity: Joi.number().integer().min(1).required(),
-  fuelType: Joi.string()
-    .valid("petrol", "diesel", "cng", "electric", "hybrid")
-    .required(),
+  fuelType: fuelTypeSchema.required(),
   transmission: Joi.string().valid("manual", "automatic").required(),
   isAC: Joi.boolean().optional(),
   color: Joi.string().trim().optional(),
@@ -113,6 +117,13 @@ export const createVehicleValidation = Joi.object({
   estimatedRentalRate: rentalRateSchema.optional(),
   driverRequired: Joi.boolean().optional(),
   ownerInfo: ownerInfoSchema.optional(),
+  // Present when a driver brings their own car rather than this being a
+  // fleet vehicle any admin can assign. Must reference an existing driver
+  // (checked in vehicle.service.js, since Joi can't hit the DB).
+  ownerDriverId: objectId.optional(),
+  // Defaults to ownerDriverId when omitted (a driver's own car is assigned
+  // to them); rejected if that driver already has another vehicle assigned.
+  assignedDriverId: objectId.optional(),
   documents: Joi.array()
     .items(
       Joi.object({
@@ -151,7 +162,7 @@ export const updateVehicleValidation = Joi.object({
     .min(1980)
     .max(new Date().getFullYear() + 1),
   seatingCapacity: Joi.number().integer().min(1),
-  fuelType: Joi.string().valid("petrol", "diesel", "cng", "electric", "hybrid"),
+  fuelType: fuelTypeSchema,
   transmission: Joi.string().valid("manual", "automatic"),
   isAC: Joi.boolean(),
   color: Joi.string().trim(),
@@ -160,6 +171,8 @@ export const updateVehicleValidation = Joi.object({
   estimatedRentalRate: rentalRateSchema,
   driverRequired: Joi.boolean(),
   ownerInfo: ownerInfoSchema,
+  // null clears ownership (vehicle reverts to a plain fleet vehicle).
+  ownerDriverId: objectId.allow(null),
   documents: Joi.array().items(
     Joi.object({
       title: Joi.string().trim().required(),
