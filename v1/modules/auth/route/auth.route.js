@@ -19,6 +19,7 @@ import {
   updateDrivingLicenseValidation,
   updateIdentificationValidation,
   updateAccountControlValidation,
+  updateUserProfileValidation,
 } from "../validation/auth.validation.js";
 
 import { validate } from "../../../middleware/validate.middleware.js";
@@ -103,6 +104,16 @@ router.get(
   authorize("superadmin", "manager"),
   controller.getUserById,
 );
+
+// Super Admin / Manager: edit any user's personal/document details
+router.patch(
+  "/users/:userId",
+  authenticate,
+  authorize("superadmin", "manager"),
+  validate(updateUserProfileValidation),
+  controller.updateUserProfile,
+);
+
 router.patch(
   "/profile",
   authenticate,

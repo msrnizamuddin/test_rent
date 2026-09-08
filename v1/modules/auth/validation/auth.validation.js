@@ -83,6 +83,9 @@ export const createStaffValidation = Joi.object({
   role: Joi.string().valid("superadmin", "manager", "driver").required(),
 
   fullName: Joi.string().trim().required(),
+  fatherName: Joi.string().trim().optional(),
+  motherName: Joi.string().trim().optional(),
+  dateOfBirth: Joi.date().optional(),
   mobileNumber: Joi.string()
     .length(11)
     .pattern(/^01[3-9]\d{8}$/)
@@ -179,6 +182,9 @@ export const accountDeactivationValidation = Joi.object({
 // ---------------- 1.3 User Profile ----------------
 export const updateProfileValidation = Joi.object({
   fullName: Joi.string().trim(),
+  fatherName: Joi.string().trim().allow(""),
+  motherName: Joi.string().trim().allow(""),
+  dateOfBirth: Joi.date(),
   email: Joi.string().email(),
   mobileNumber: Joi.string()
     .length(11)
@@ -211,6 +217,24 @@ export const updateAccountControlValidation = Joi.object({
   ),
   updatedBy: objectId.required(),
 }).min(2); // at least the field being changed + updatedBy
+
+// Super Admin / Manager editing any user's own personal/document details —
+// distinct from updateAccountControl (role/status/permissions) and from
+// updateProfile (self-service, requires being logged in as that user).
+export const updateUserProfileValidation = Joi.object({
+  fullName: Joi.string().trim(),
+  fatherName: Joi.string().trim().allow(""),
+  motherName: Joi.string().trim().allow(""),
+  dateOfBirth: Joi.date(),
+  email: Joi.string().email(),
+  mobileNumber: Joi.string()
+    .length(11)
+    .pattern(/^01[3-9]\d{8}$/),
+  address: addressSchema,
+  identification: identificationSchema,
+  drivingLicense: drivingLicenseSchema,
+  profilePicture: Joi.string().uri(),
+}).min(1);
 
 export const updateProfilePictureValidation = Joi.object({
   profilePicture: Joi.string().uri().required(),

@@ -94,6 +94,14 @@ export const getUserById = handle(async (req) => {
   return { message: "User fetched successfully", data };
 });
 
+// Super Admin / Manager: edit any user's own personal/document details
+// (name, father/mother name, DOB, license, NID, address, ...) — distinct
+// from updateAccountControl below (role/status/permissions only).
+export const updateUserProfile = handle(async (req) => {
+  const data = await authService.updateProfile(req.params.userId, req.body);
+  return { message: "User profile updated successfully", data };
+});
+
 export const updateProfile = handle(async (req) => {
   const data = await authService.updateProfile(req.user.id, req.body);
   return { message: "Profile updated successfully", data };

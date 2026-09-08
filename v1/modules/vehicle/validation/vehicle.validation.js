@@ -109,7 +109,7 @@ export const createVehicleValidation = Joi.object({
   isAC: Joi.boolean().optional(),
   color: Joi.string().trim().optional(),
   features: Joi.array().items(Joi.string()).optional(),
-  location: locationSchema.required(),
+  location: locationSchema.optional(),
   estimatedRentalRate: rentalRateSchema.optional(),
   driverRequired: Joi.boolean().optional(),
   ownerInfo: ownerInfoSchema.optional(),
@@ -166,6 +166,8 @@ export const updateVehicleValidation = Joi.object({
       fileUrl: Joi.string().uri().required(),
     }),
   ),
+  // Persistent driver assignment ("this driver drives this car"); null unassigns.
+  assignedDriverId: objectId.allow(null),
   availabilityStatus: Joi.string().valid(
     "pending",
     "approved",

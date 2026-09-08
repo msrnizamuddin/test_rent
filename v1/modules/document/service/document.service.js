@@ -1,4 +1,5 @@
 import Document from "../model/document.model.js";
+import cloudinary from "../../../utils/cloudinary/index.js";
 
 const buildError = (message, statusCode = 400) => {
   const err = new Error(message);
@@ -35,6 +36,19 @@ const upload = async (requester, payload) => {
   return Document.create({ ...payload, ownerType, ownerId });
 };
 
+// Multipart variant: actually uploads the file to Cloudinary (the plain
+// upload() above only ever accepted a fileUrl the client already had —
+// nothing in this API previously did the actual upload) then records it
+// the same way.
+const uploadFile = async (requester, file, payload) => {
+  if (!file) throw buildError("No file uploaded");
+  if (!payload.category) throw buildError("category is required");
+
+  const uploaded = await cloudinary.uploadFile(file);
+
+  return upload(requester, { ...payload, fileUrl: uploaded.url });
+};
+
 const verify = async (id, verifiedById) => {
   const doc = await Document.setStatus(id, "verified", { verifiedById });
   if (!doc) throw buildError("Document not found", 404);
@@ -53,4 +67,4 @@ const remove = async (id) => {
   return { deleted: true };
 };
 
-export default { getAll, search, getById, getMine, getByOwner, upload, verify, reject, remove };
+export default { getAll, search, getById, getMine, getByOwner, upload, uploadFile, verify, reject, remove };
