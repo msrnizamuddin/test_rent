@@ -975,6 +975,71 @@ Same field rules as `/upload`, minus the file — you provide `fileUrl` directly
 
 ---
 
+## 12. Offer Module
+
+Marketing promotions shown on the public website (e.g. an "Eid Special Offer" banner on
+the homepage) — separate from RentalRequest/Trip discounts, purely promotional content the
+admin panel manages and the customer-facing site reads.
+
+### Base URL
+```
+http://localhost:8000/api/v1/offer/{web|app}
+```
+
+### List / filter offers
+
+**Endpoint:** `GET /`
+**Authentication:** ❌ Public
+**Optional query params:** `status` (`active` \| `inactive`), `tripType` (`single` \| `round`
+\| `down`)
+```
+GET /offer/app/?status=active
+```
+
+### Create offer
+
+**Endpoint:** `POST /`
+**Authentication:** ✅ `TOKEN_ADMIN` (superadmin or manager)
+```json
+{
+  "title": "Eid Special Offer",
+  "subtitle": "Save on every ride this Eid",
+  "tripType": "round",
+  "status": "active",
+  "fromLocation": "Dhaka",
+  "toLocation": "Chattogram",
+  "discountType": "percentage",
+  "discountValue": 10,
+  "startDate": "2026-09-10",
+  "endDate": "2026-09-20",
+  "bannerImage": "https://res.cloudinary.com/.../banner.jpg",
+  "offerText": "<p>Book now and <strong>save 10%</strong> on Eid trips.</p>"
+}
+```
+Only `title` and `discountValue` are required — everything else is optional. `tripType`,
+`fromLocation`/`toLocation` let an offer target a specific route; omit them for a
+platform-wide offer. `discountType` is `"percentage"` (value 0-100) or `"fixed"` (a flat
+amount) — `discountValue` means whichever `discountType` says. `bannerImage` and
+`offerText` (rich HTML) are typically populated by uploading via the Document module
+(§11, `POST /document/web/upload`, no `ownerType`/`ownerId` needed) and an image-embed step,
+then passing the resulting URL(s) here.
+
+**Note:** `discountValue` is a Postgres `Decimal` — it comes back from the API as a numeric
+string (e.g. `"15"`), not a JS number, matching every other money-like field in this API
+(Payment/Invoice `amount`, `total`, etc).
+
+### Update / delete offer
+
+**Endpoint:** `PATCH /:offerId` — same body shape as create, all fields optional, at least
+one required. `DELETE /:offerId` removes it. Both `TOKEN_ADMIN` only.
+
+### Get one / list everything
+
+`GET /:offerId` (public) and `GET /all` (public, no filters — same "safe get everything"
+pattern as every other module).
+
+---
+
 ## 📋 Complete API Endpoint Summary
 
 Every row below exists under both `/web` and `/app`.
@@ -1020,6 +1085,17 @@ Every row below exists under both `/web` and `/app`.
 | PATCH | `/:documentId/verify` | TOKEN_ADMIN | Mark a document verified |
 | PATCH | `/:documentId/reject` | TOKEN_ADMIN | Reject a document (`rejectionReason` required) |
 | DELETE | `/:documentId` | TOKEN_ADMIN | Delete a document |
+
+### Offer — `/api/v1/offer`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/` | Public | List/filter offers (`?status=&tripType=`) |
+| GET | `/all` | Public | List every offer |
+| GET | `/:offerId` | Public | Get one offer |
+| POST | `/` | TOKEN_ADMIN | Create offer |
+| PATCH | `/:offerId` | TOKEN_ADMIN | Update offer |
+| DELETE | `/:offerId` | TOKEN_ADMIN | Delete offer |
 
 ### Vehicle Category — `/api/v1/vehicle-category`
 

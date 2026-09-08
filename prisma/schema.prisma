@@ -728,3 +728,42 @@ enum DocumentStatus {
 
   @@map("document_status")
 }
+
+// ---------------------------------------------------------------------------
+// Offers — marketing promotions shown on the public website
+// ---------------------------------------------------------------------------
+model Offer {
+  id            String       @id @default(uuid()) @db.Uuid
+  title         String
+  subtitle      String?
+  tripType      TripType?    @map("trip_type")
+  status        OfferStatus  @default(active)
+  fromLocation  String?      @map("from_location")
+  toLocation    String?      @map("to_location")
+  discountType  DiscountType @default(percentage) @map("discount_type")
+  discountValue Decimal      @map("discount_value") @db.Decimal
+  startDate     DateTime?    @map("start_date") @db.Date
+  endDate       DateTime?    @map("end_date") @db.Date
+  bannerImage   String?      @map("banner_image")
+  offerText     String?      @map("offer_text")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([status])
+  @@map("offers")
+}
+
+enum OfferStatus {
+  active
+  inactive
+
+  @@map("offer_status")
+}
+
+enum DiscountType {
+  percentage
+  fixed
+
+  @@map("discount_type")
+}
