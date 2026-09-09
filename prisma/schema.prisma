@@ -63,8 +63,6 @@ model User {
   vehiclesAssigned Vehicle[] @relation("VehicleAssignedDriver")
   vehiclesOwned    Vehicle[] @relation("VehicleOwnerDriver")
 
-  driverApplicationsReviewed DriverApplication[] @relation("DriverApplicationReviewedBy")
-
   rentalRequestsAsCustomer RentalRequest[] @relation("RentalRequestCustomer")
   rentalRequestsAsDriver   RentalRequest[] @relation("RentalRequestDriver")
   rentalRequestsReviewed   RentalRequest[] @relation("RentalRequestReviewer")
@@ -795,38 +793,3 @@ enum TouristSpotStatus {
   @@map("tourist_spot_status")
 }
 
-// ---------------------------------------------------------------------------
-// Driver Applications — public self-service "become a driver" submissions.
-// Driver accounts are never created directly from these; an admin reviews
-// and approves (which creates the real User) or rejects.
-// ---------------------------------------------------------------------------
-model DriverApplication {
-  id              String                  @id @default(uuid()) @db.Uuid
-  fullName        String                  @map("full_name")
-  mobileNumber    String                  @map("mobile_number")
-  email           String?
-  licenseNumber   String                  @map("license_number")
-  // Hashed at submission time — never store the plaintext password, even
-  // temporarily while the application is pending review.
-  passwordHash    String                  @map("password_hash")
-  status          DriverApplicationStatus @default(pending)
-  rejectionReason String?                 @map("rejection_reason")
-
-  reviewedById String? @map("reviewed_by") @db.Uuid
-  reviewedBy   User?   @relation("DriverApplicationReviewedBy", fields: [reviewedById], references: [id])
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  @@index([status])
-  @@index([mobileNumber])
-  @@map("driver_applications")
-}
-
-enum DriverApplicationStatus {
-  pending
-  approved
-  rejected
-
-  @@map("driver_application_status")
-}

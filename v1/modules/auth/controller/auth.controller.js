@@ -23,6 +23,15 @@ export const signup = handle(async (req) => {
   };
 });
 
+export const signupDriver = handle(async (req) => {
+  const data = await authService.signupDriver(req.body);
+  return {
+    statusCode: 201,
+    message: "Registration received. Your account will be activated after admin review.",
+    data,
+  };
+});
+
 export const bootstrapSuperAdmin = handle(async (req) => {
   const data = await authService.bootstrapSuperAdmin(req.body);
   return { statusCode: 201, message: "Superadmin created successfully", data };

@@ -3,6 +3,7 @@ import * as controller from "../controller/auth.controller.js";
 
 import {
   signupValidation,
+  signupDriverValidation,
   bootstrapSuperAdminValidation,
   createStaffValidation,
   loginValidation,
@@ -32,6 +33,11 @@ const router = express.Router();
 
 // ---------------- 1.1 Registration ----------------
 router.post("/customer", validate(signupValidation), controller.signup);
+
+// Public driver self-signup: creates the account immediately but inactive
+// until an admin activates it (see authService.signupDriver) — no separate
+// application/review table.
+router.post("/driver", validate(signupDriverValidation), controller.signupDriver);
 
 // One-time bootstrap: create the first superadmin. No auth required —
 // protected by SETUP_SECRET and blocked once a superadmin already exists.

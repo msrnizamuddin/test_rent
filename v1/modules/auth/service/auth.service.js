@@ -53,6 +53,28 @@ const signup = async (payload) => {
   };
 };
 
+// Public self-signup for drivers. Unlike customer signup there's no OTP
+// step — the account is created immediately but centralStatus "inactive",
+// so login is blocked (see login() below) until an admin reviews the
+// application and flips their status to "active" from the Drivers list.
+const signupDriver = async (payload) => {
+  const existing = await User.findByMobileOrEmail(payload.mobileNumber, payload.email);
+  if (existing) throw buildError("Mobile number or email already registered", 409);
+
+  const user = await User.create({
+    role: "driver",
+    fullName: payload.fullName,
+    mobileNumber: payload.mobileNumber,
+    email: payload.email,
+    password: payload.password,
+    drivingLicense: { number: payload.licenseNumber },
+    driverStatus: "pending",
+    centralStatus: "inactive",
+  });
+
+  return { userId: user.id };
+};
+
 // One-time bootstrap: create the very first superadmin.
 // No auth token required (there's no admin yet to issue one), so this is
 // gated by a SETUP_SECRET env var AND blocked once any superadmin already exists.
@@ -316,6 +338,7 @@ const updateAccountControl = async (userId, payload, updatedByUserId) => {
 
 export default {
   signup,
+  signupDriver,
   bootstrapSuperAdmin,
   createStaff,
   login,
