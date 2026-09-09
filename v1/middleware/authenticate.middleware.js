@@ -32,7 +32,7 @@ export const authenticate = async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { id: true, role: true, centralStatus: true },
+      select: { id: true, role: true, centralStatus: true, isVerified: true },
     });
 
     if (!user || user.centralStatus !== "active") {
@@ -41,7 +41,7 @@ export const authenticate = async (req, res, next) => {
         .json({ success: false, message: "Session is no longer valid, please log in again" });
     }
 
-    req.user = { id: user.id, role: user.role };
+    req.user = { id: user.id, role: user.role, isVerified: user.isVerified };
     next();
   } catch (err) {
     next(err);
@@ -56,4 +56,17 @@ export const authorize = (...allowedRoles) => {
     }
     next();
   };
+};
+
+// Blocks a driver from trip-facing endpoints until an admin has approved
+// their submitted documents (see auth.service.js updateAccountControl,
+// which sets isVerified true only once that review passes).
+export const requireVerifiedDriver = (req, res, next) => {
+  if (req.user?.role === "driver" && !req.user.isVerified) {
+    return res.status(403).json({
+      success: false,
+      message: "Please complete your profile and submit your documents for verification.",
+    });
+  }
+  next();
 };

@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { requiredMessage } from "../../../utils/joi-messages.js";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 
@@ -57,13 +58,13 @@ export const searchVehicleValidation = Joi.object({
 
 // ---------------- 2.3 Vehicle Details ----------------
 export const vehicleIdParamValidation = Joi.object({
-  vehicleId: objectId.required(),
+  vehicleId: objectId.required().messages(requiredMessage("Vehicle id")),
 });
 
 // ---------------- Vehicle Entry (module 7, superadmin/manager only) ----------------
 const locationSchema = Joi.object({
   address: Joi.string().trim().optional(),
-  city: Joi.string().trim().required(),
+  city: Joi.string().trim().required().messages(requiredMessage("City")),
   district: Joi.string().trim().optional(),
   latitude: Joi.number().optional(),
   longitude: Joi.number().optional(),
@@ -82,10 +83,10 @@ const ownerInfoSchema = Joi.object({
 });
 
 export const createVehicleValidation = Joi.object({
-  vehicleName: Joi.string().trim().required(),
-  brand: Joi.string().trim().required(),
-  vehicleModel: Joi.string().trim().required(),
-  categoryId: objectId.required(),
+  vehicleName: Joi.string().trim().required().messages(requiredMessage("Vehicle name")),
+  brand: Joi.string().trim().required().messages(requiredMessage("Brand")),
+  vehicleModel: Joi.string().trim().required().messages(requiredMessage("Vehicle model")),
+  categoryId: objectId.required().messages(requiredMessage("Category")),
   vehicleType: Joi.string()
     .valid(
       "sedan",
@@ -99,17 +100,19 @@ export const createVehicleValidation = Joi.object({
       "coaster",
       "other",
     )
-    .required(),
+    .required()
+    .messages(requiredMessage("Vehicle type")),
   images: Joi.array().items(Joi.string().uri()).optional(),
-  registrationNumber: Joi.string().trim().required(),
+  registrationNumber: Joi.string().trim().required().messages(requiredMessage("Registration number")),
   modelYear: Joi.number()
     .integer()
     .min(1980)
     .max(new Date().getFullYear() + 1)
-    .required(),
-  seatingCapacity: Joi.number().integer().min(1).required(),
-  fuelType: fuelTypeSchema.required(),
-  transmission: Joi.string().valid("manual", "automatic").required(),
+    .required()
+    .messages(requiredMessage("Model year")),
+  seatingCapacity: Joi.number().integer().min(1).required().messages(requiredMessage("Seating capacity")),
+  fuelType: fuelTypeSchema.required().messages(requiredMessage("Fuel type")),
+  transmission: Joi.string().valid("manual", "automatic").required().messages(requiredMessage("Transmission")),
   isAC: Joi.boolean().optional(),
   color: Joi.string().trim().optional(),
   features: Joi.array().items(Joi.string()).optional(),
@@ -127,8 +130,8 @@ export const createVehicleValidation = Joi.object({
   documents: Joi.array()
     .items(
       Joi.object({
-        title: Joi.string().trim().required(),
-        fileUrl: Joi.string().uri().required(),
+        title: Joi.string().trim().required().messages(requiredMessage("Document title")),
+        fileUrl: Joi.string().uri().required().messages(requiredMessage("Document file URL")),
       }),
     )
     .optional(),
@@ -175,8 +178,8 @@ export const updateVehicleValidation = Joi.object({
   ownerDriverId: objectId.allow(null),
   documents: Joi.array().items(
     Joi.object({
-      title: Joi.string().trim().required(),
-      fileUrl: Joi.string().uri().required(),
+      title: Joi.string().trim().required().messages(requiredMessage("Document title")),
+      fileUrl: Joi.string().uri().required().messages(requiredMessage("Document file URL")),
     }),
   ),
   // Persistent driver assignment ("this driver drives this car"); null unassigns.

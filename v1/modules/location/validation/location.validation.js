@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { requiredMessage } from "../../../utils/joi-messages.js";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 
@@ -10,11 +11,11 @@ export const searchLocationValidation = Joi.object({
 });
 
 export const locationIdParamValidation = Joi.object({
-  locationId: objectId.required(),
+  locationId: objectId.required().messages(requiredMessage("Location id")),
 });
 
 export const createLocationValidation = Joi.object({
-  name: Joi.string().trim().required(),
+  name: Joi.string().trim().required().messages(requiredMessage("Name")),
   address: Joi.string().trim().allow("", null).optional(),
   city: Joi.string().trim().allow("", null).optional(),
   district: Joi.string().trim().allow("", null).optional(),

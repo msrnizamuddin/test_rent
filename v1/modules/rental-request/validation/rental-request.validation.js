@@ -1,10 +1,11 @@
 import Joi from "joi";
+import { requiredMessage } from "../../../utils/joi-messages.js";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 
 const locationSchema = Joi.object({
   address: Joi.string().trim().optional(),
-  city: Joi.string().trim().required(),
+  city: Joi.string().trim().required().messages(requiredMessage("City")),
   district: Joi.string().trim().optional(),
   latitude: Joi.number().optional(),
   longitude: Joi.number().optional(),
@@ -12,35 +13,35 @@ const locationSchema = Joi.object({
 
 // ---------------- 3. Create Rental Request ----------------
 export const createRentalRequestValidation = Joi.object({
-  tripType: Joi.string().valid("single", "round", "down").required(),
+  tripType: Joi.string().valid("single", "round", "down").required().messages(requiredMessage("Trip type")),
   vehicleId: objectId.optional(), // customer may not know the exact vehicle yet
-  pickupLocation: locationSchema.required(),
-  destination: locationSchema.required(),
+  pickupLocation: locationSchema.required().messages(requiredMessage("Pickup location")),
+  destination: locationSchema.required().messages(requiredMessage("Destination")),
   returnLocation: locationSchema.when("tripType", {
     is: "round",
-    then: Joi.required(),
+    then: Joi.required().messages(requiredMessage("Return location")),
     otherwise: Joi.optional(),
   }),
-  pickupDate: Joi.date().iso().required(),
-  pickupTime: Joi.string().trim().required(),
+  pickupDate: Joi.date().iso().required().messages(requiredMessage("Pickup date")),
+  pickupTime: Joi.string().trim().required().messages(requiredMessage("Pickup time")),
   returnDate: Joi.date().iso().when("tripType", {
     is: "round",
-    then: Joi.required(),
+    then: Joi.required().messages(requiredMessage("Return date")),
     otherwise: Joi.optional(),
   }),
   returnTime: Joi.string().trim().when("tripType", {
     is: "round",
-    then: Joi.required(),
+    then: Joi.required().messages(requiredMessage("Return time")),
     otherwise: Joi.optional(),
   }),
   passengerCount: Joi.number().integer().min(1).default(1),
   driverRequired: Joi.boolean().default(false),
   specialInstructions: Joi.string().trim().allow("").optional(),
-  contactNumber: Joi.string().trim().required(),
+  contactNumber: Joi.string().trim().required().messages(requiredMessage("Contact number")),
 });
 
 export const requestIdParamValidation = Joi.object({
-  requestId: objectId.required(),
+  requestId: objectId.required().messages(requiredMessage("Request id")),
 });
 
 // ---------------- 10. Customer: My Requests ----------------
@@ -116,13 +117,13 @@ export const confirmRentalRequestValidation = Joi.object({
 
 // ---------------- 13. Admin: Assign Vehicle / Driver ----------------
 export const assignVehicleValidation = Joi.object({
-  vehicleId: objectId.required(),
+  vehicleId: objectId.required().messages(requiredMessage("Vehicle id")),
 });
 
 export const assignDriverValidation = Joi.object({
-  driverId: objectId.required(),
+  driverId: objectId.required().messages(requiredMessage("Driver id")),
 });
 
 export const rejectRentalRequestValidation = Joi.object({
-  reason: Joi.string().trim().required(),
+  reason: Joi.string().trim().required().messages(requiredMessage("Reason")),
 });

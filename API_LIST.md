@@ -148,10 +148,15 @@ wiring up SMS/email — see §1.6.
 
 Public self-signup for drivers — no admin token needed to apply, unlike `POST /staff`
 (§1.15). Unlike customer registration there's no OTP step: the account is created
-immediately but `centralStatus: "inactive"`, so login is blocked (`403 Account is
-inactive`) until a superadmin/manager reviews the new driver in the Drivers list and
-flips their status to `active` (§1.18, `PATCH /account/:userId`, or the admin panel's
-status dropdown) — no separate application/approval table.
+immediately with `centralStatus: "active"` (login works right away) but
+`isVerified: false` — the driver logs in, completes their profile (identification,
+driving license, documents — see §1.10/§1.11/Document module §11) and calls
+`POST /driver/submit-for-review` (§1.3c) once ready. A superadmin/manager then reviews
+and approves from the Drivers list (`driverStatus: "approved"`, §1.18), which also flips
+`isVerified` to `true`. Driver-only trip endpoints (`/trip/:tripId/driver-action`,
+`/trip/:tripId/location`) and being assigned to a rental request both require
+`isVerified: true` — an unverified driver gets a 403 explaining they need to submit
+documents first.
 
 **Endpoint**
 ```
@@ -171,6 +176,25 @@ POST /driver
 ```
 `email` is optional; everything else is required. Rejected with `409` if a `User`
 already exists with that mobile/email.
+
+---
+
+### 1.3c Driver: Submit Profile for Review
+
+Marks a driver's profile ready for admin review — requires `identification` and
+`drivingLicense` already set (§1.10/§1.11) and at least one uploaded `Document` row
+(Document module §11, `ownerType: "user"`, no `ownerId` needed for self-upload).
+Sets `profileSubmittedAt` so admin can see who's actually finished vs. just registered.
+
+**Endpoint**
+```
+POST /driver/submit-for-review
+```
+**Authentication:** ✅ `TOKEN_DRIVER`
+
+**Response** on missing prerequisites: `400` with a message naming what's missing
+("Please add your NID/identification details first", etc.) — check each in order and
+fix one at a time.
 
 ---
 
@@ -454,6 +478,24 @@ personal details). Every field is optional; send just what changed.
 { "centralStatus": "suspended" }
 ```
 `centralStatus` is `active` | `inactive` | `suspended` | `blocked`.
+
+**Deactivate a driver (reason required)**
+```json
+{ "centralStatus": "inactive", "reason": "Suspected fake documents" }
+```
+Setting `centralStatus` to `"inactive"` specifically requires a `reason` — stored as
+`inactiveReason` and shown back to the driver verbatim on their next blocked login
+attempt instead of the generic "Account is inactive". `suspended`/`blocked` don't
+require a reason. Moving `centralStatus` away from `"inactive"` again clears the stored
+reason.
+
+**Approve a driver (documents required)**
+```json
+{ "driverStatus": "approved" }
+```
+Rejected with `400` ("Cannot approve: this driver has no documents uploaded") unless the
+driver has at least one `Document` row (see Document module §11). Succeeding also sets
+`isVerified: true` on the driver — see §1.3b.
 
 **Change role & permissions**
 ```json
@@ -1112,7 +1154,8 @@ Every row below exists under both `/web` and `/app`.
 | POST | `/bootstrap-superadmin` | Public + setupKey | Create the first superadmin |
 | POST | `/login` | Public | Login (any role) |
 | POST | `/customer` | Public | Register customer |
-| POST | `/driver` | Public | Driver self-signup — creates the account inactive until an admin activates it (§1) |
+| POST | `/driver` | Public | Driver self-signup — active but unverified until admin approves (§1.3b) |
+| POST | `/driver/submit-for-review` | TOKEN_DRIVER | Mark profile+documents ready for admin review (§1.3c) |
 | POST | `/verify-otp` | Public | Verify OTP |
 | POST | `/forgot-password` | Public | Request password reset |
 | POST | `/reset-password` | Public | Reset password |

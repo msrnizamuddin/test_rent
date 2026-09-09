@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import User from "../model/auth.model.js";
+import Document from "../../document/model/document.model.js";
 import { recordAuditLog } from "../../audit-log/service/audit-log.service.js";
 
 // Spec module 30 "Account Blocking": lock the account after this many
@@ -54,9 +55,12 @@ const signup = async (payload) => {
 };
 
 // Public self-signup for drivers. Unlike customer signup there's no OTP
-// step — the account is created immediately but centralStatus "inactive",
-// so login is blocked (see login() below) until an admin reviews the
-// application and flips their status to "active" from the Drivers list.
+// step — login works right away (centralStatus defaults to "active"), but
+// isVerified stays false until the driver completes their profile and
+// documents (submitForReview below) and an admin approves them. The
+// frontend is responsible for restricting an unverified driver to the
+// profile/documents screen; driver-only trip endpoints also enforce this
+// server-side (see trip.service.js / rental-request.service.js).
 const signupDriver = async (payload) => {
   const existing = await User.findByMobileOrEmail(payload.mobileNumber, payload.email);
   if (existing) throw buildError("Mobile number or email already registered", 409);
@@ -69,10 +73,27 @@ const signupDriver = async (payload) => {
     password: payload.password,
     drivingLicense: { number: payload.licenseNumber },
     driverStatus: "pending",
-    centralStatus: "inactive",
   });
 
   return { userId: user.id };
+};
+
+// A driver marks their profile ready for review once they've filled in
+// identification/driving-license details and uploaded at least one
+// document (see document.model.js findByOwner). Admin then reviews and
+// approves via updateAccountControl below, which re-checks documents
+// exist before allowing driverStatus -> "approved".
+const submitForReview = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) throw buildError("User not found", 404);
+
+  if (!user.identification) throw buildError("Please add your NID/identification details first", 400);
+  if (!user.drivingLicense) throw buildError("Please add your driving license details first", 400);
+
+  const documents = await Document.findByOwner("user", userId);
+  if (!documents.length) throw buildError("Please upload at least one document first", 400);
+
+  return User.updateById(userId, { profileSubmittedAt: new Date() });
 };
 
 // One-time bootstrap: create the very first superadmin.
@@ -134,7 +155,14 @@ const login = async ({ emailOrPhone, password }, ip) => {
       metadata: { centralStatus: user.centralStatus },
       ipAddress: ip,
     });
-    throw buildError(`Account is ${user.centralStatus}`, 403);
+    // inactiveReason is the cause an admin is required to write whenever
+    // they set centralStatus to "inactive" (see updateAccountControl) —
+    // show it directly rather than the generic status label.
+    const message =
+      user.centralStatus === "inactive" && user.inactiveReason
+        ? user.inactiveReason
+        : `Account is ${user.centralStatus}`;
+    throw buildError(message, 403);
   }
 
   const isMatch = await User.comparePassword(password, user.password);
@@ -331,7 +359,30 @@ const updateIdentification = async (userId, identification) =>
 // updatedByUserId comes from the authenticated caller (req.user.id) — never
 // trust a client-supplied value for who made the change.
 const updateAccountControl = async (userId, payload, updatedByUserId) => {
-  const user = await User.updateById(userId, { ...payload, updatedBy: updatedByUserId });
+  const finalPayload = { ...payload };
+
+  // Setting centralStatus to "inactive" requires a written cause (enforced
+  // by Joi — see updateAccountControlValidation); store it, and clear any
+  // stale reason once the account leaves "inactive" again.
+  if (payload.centralStatus === "inactive") {
+    finalPayload.inactiveReason = payload.reason;
+  } else if (payload.centralStatus) {
+    finalPayload.inactiveReason = null;
+  }
+  delete finalPayload.reason; // not a real User column
+
+  // Approving a driver requires at least one uploaded document — this is
+  // also the point at which they become "verified", since that's what the
+  // review is for.
+  if (payload.driverStatus === "approved") {
+    const documents = await Document.findByOwner("user", userId);
+    if (!documents.length) {
+      throw buildError("Cannot approve: this driver has no documents uploaded", 400);
+    }
+    finalPayload.isVerified = true;
+  }
+
+  const user = await User.updateById(userId, { ...finalPayload, updatedBy: updatedByUserId });
   if (!user) throw buildError("User not found", 404);
   return user;
 };
@@ -339,6 +390,7 @@ const updateAccountControl = async (userId, payload, updatedByUserId) => {
 export default {
   signup,
   signupDriver,
+  submitForReview,
   bootstrapSuperAdmin,
   createStaff,
   login,

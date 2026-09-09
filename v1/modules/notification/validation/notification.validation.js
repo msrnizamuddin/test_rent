@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { requiredMessage } from "../../../utils/joi-messages.js";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 
@@ -14,14 +15,14 @@ export const getMyNotificationsValidation = Joi.object({
 
 // ---------------- PATCH /:notificationId/read, DELETE /:notificationId ----------------
 export const notificationIdParamValidation = Joi.object({
-  notificationId: objectId.required(),
+  notificationId: objectId.required().messages(requiredMessage("Notification id")),
 });
 
 // ---------------- POST / (superadmin/manager manual send) ----------------
 export const sendNotificationValidation = Joi.object({
-  userId: objectId.required(),
-  title: Joi.string().trim().required(),
-  message: Joi.string().trim().required(),
+  userId: objectId.required().messages(requiredMessage("User id")),
+  title: Joi.string().trim().required().messages(requiredMessage("Title")),
+  message: Joi.string().trim().required().messages(requiredMessage("Message")),
   type: NOTIFICATION_TYPES.optional(),
   channel: Joi.string().valid(...CHANNELS).default("in_app"),
 });

@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { requiredMessage } from "../../../utils/joi-messages.js";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 
@@ -7,11 +8,11 @@ export const searchCategoryValidation = Joi.object({
 });
 
 export const categoryIdParamValidation = Joi.object({
-  categoryId: objectId.required(),
+  categoryId: objectId.required().messages(requiredMessage("Category id")),
 });
 
 export const createCategoryValidation = Joi.object({
-  name: Joi.string().trim().required(),
+  name: Joi.string().trim().required().messages(requiredMessage("Name")),
   description: Joi.string().trim().allow("", null).optional(),
   image: Joi.string().uri().optional(),
   status: Joi.string().valid("active", "inactive").optional(),

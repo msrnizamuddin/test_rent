@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { requiredMessage } from "../../../utils/joi-messages.js";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 
@@ -18,7 +19,7 @@ const TRIP_STATUSES = [
 ];
 
 export const tripIdParamValidation = Joi.object({
-  tripId: objectId.required(),
+  tripId: objectId.required().messages(requiredMessage("Trip id")),
 });
 
 // ---------------- 16. Customer: My Trips ----------------
@@ -46,16 +47,17 @@ export const listTripsValidation = Joi.object({
 export const driverActionValidation = Joi.object({
   action: Joi.string()
     .valid("accept", "reject", "on-the-way", "arrived", "picked-up", "start", "complete")
-    .required(),
+    .required()
+    .messages(requiredMessage("Action")),
 });
 
 // ---------------- 16.6 Driver: Live Location ----------------
 export const updateLocationValidation = Joi.object({
-  latitude: Joi.number().required(),
-  longitude: Joi.number().required(),
+  latitude: Joi.number().required().messages(requiredMessage("Latitude")),
+  longitude: Joi.number().required().messages(requiredMessage("Longitude")),
 });
 
 // ---------------- Admin: Cancel ----------------
 export const cancelTripValidation = Joi.object({
-  reason: Joi.string().trim().required(),
+  reason: Joi.string().trim().required().messages(requiredMessage("Reason")),
 });

@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { requiredMessage } from "../../../utils/joi-messages.js";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 const tripType = Joi.string().valid("single", "round", "down");
@@ -11,7 +12,7 @@ export const searchPricingValidation = Joi.object({
 });
 
 export const pricingIdParamValidation = Joi.object({
-  pricingId: objectId.required(),
+  pricingId: objectId.required().messages(requiredMessage("Pricing id")),
 });
 
 const rateFields = {
@@ -27,7 +28,7 @@ const rateFields = {
 };
 
 export const createPricingValidation = Joi.object({
-  name: Joi.string().trim().required(),
+  name: Joi.string().trim().required().messages(requiredMessage("Name")),
   tripType: tripType.optional(),
   categoryId: objectId.optional(),
   vehicleId: objectId.optional(),
