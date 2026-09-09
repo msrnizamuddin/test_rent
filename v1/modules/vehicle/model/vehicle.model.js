@@ -94,11 +94,29 @@ const search = async ({
   }
 
   if (location) {
-    where.OR = (where.OR || []).concat([
-      { location: { path: ["city"], string_contains: location, mode: "insensitive" } },
-      { location: { path: ["district"], string_contains: location, mode: "insensitive" } },
-      { location: { path: ["address"], string_contains: location, mode: "insensitive" } },
-    ]);
+    // `string_contains` only matches when the STORED field contains the
+    // query — backwards when the query is a full autocomplete address like
+    // "Gulshan 1, Dhaka, Bangladesh" against a short stored city="Dhaka"
+    // (which can never contain the longer string). Splitting the query
+    // into its comma-separated parts and matching each part separately
+    // catches the common case: the "Dhaka" part on its own does match a
+    // stored city of "Dhaka".
+    const locationTokens = [
+      ...new Set(
+        location
+          .split(",")
+          .map((part) => part.trim())
+          .filter(Boolean),
+      ),
+    ];
+
+    where.OR = (where.OR || []).concat(
+      locationTokens.flatMap((token) => [
+        { location: { path: ["city"], string_contains: token, mode: "insensitive" } },
+        { location: { path: ["district"], string_contains: token, mode: "insensitive" } },
+        { location: { path: ["address"], string_contains: token, mode: "insensitive" } },
+      ]),
+    );
   }
 
   if (minPrice !== undefined || maxPrice !== undefined) {
