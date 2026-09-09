@@ -6,6 +6,11 @@ const SELECT = {
   tripType: true,
   categoryId: true,
   vehicleId: true,
+  vehicleCondition: true,
+  basePrice: true,
+  baseHours: true,
+  includedKm: true,
+  extraHourPrice: true,
   perKmRate: true,
   perHourRate: true,
   perDayRate: true,
@@ -25,11 +30,12 @@ const SELECT = {
 const getAll = async () =>
   prisma.pricingRule.findMany({ select: SELECT, orderBy: { createdAt: "desc" } });
 
-const search = async ({ tripType, categoryId, vehicleId, isActive }) => {
+const search = async ({ tripType, categoryId, vehicleId, vehicleCondition, isActive }) => {
   const where = {};
   if (tripType) where.tripType = tripType;
   if (categoryId) where.categoryId = categoryId;
   if (vehicleId) where.vehicleId = vehicleId;
+  if (vehicleCondition) where.vehicleCondition = vehicleCondition;
   if (isActive !== undefined) where.isActive = isActive;
 
   return prisma.pricingRule.findMany({
@@ -49,6 +55,11 @@ const create = async (payload) =>
       tripType: payload.tripType || null,
       categoryId: payload.categoryId || null,
       vehicleId: payload.vehicleId || null,
+      vehicleCondition: payload.vehicleCondition || null,
+      basePrice: payload.basePrice ?? null,
+      baseHours: payload.baseHours ?? null,
+      includedKm: payload.includedKm ?? null,
+      extraHourPrice: payload.extraHourPrice ?? null,
       perKmRate: payload.perKmRate ?? null,
       perHourRate: payload.perHourRate ?? null,
       perDayRate: payload.perDayRate ?? null,
@@ -72,6 +83,11 @@ const FIELD_MAP = {
   tripType: "tripType",
   categoryId: "categoryId",
   vehicleId: "vehicleId",
+  vehicleCondition: "vehicleCondition",
+  basePrice: "basePrice",
+  baseHours: "baseHours",
+  includedKm: "includedKm",
+  extraHourPrice: "extraHourPrice",
   perKmRate: "perKmRate",
   perHourRate: "perHourRate",
   perDayRate: "perDayRate",

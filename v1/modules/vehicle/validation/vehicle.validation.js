@@ -46,6 +46,7 @@ export const searchVehicleValidation = Joi.object({
   availability: Joi.string()
     .valid("available", "assigned", "on-trip", "maintenance")
     .optional(),
+  condition: Joi.string().valid("new", "old").optional(),
 
   // pagination & sorting
   page: Joi.number().integer().min(1).default(1),
@@ -114,6 +115,9 @@ export const createVehicleValidation = Joi.object({
   fuelType: fuelTypeSchema.required().messages(requiredMessage("Fuel type")),
   transmission: Joi.string().valid("manual", "automatic").required().messages(requiredMessage("Transmission")),
   isAC: Joi.boolean().optional(),
+  // New vehicles command a higher price than old ones in the same
+  // category — used to pick the right PricingRule. Defaults to "new".
+  condition: Joi.string().valid("new", "old").optional(),
   color: Joi.string().trim().optional(),
   features: Joi.array().items(Joi.string()).optional(),
   location: locationSchema.optional(),
@@ -168,6 +172,7 @@ export const updateVehicleValidation = Joi.object({
   fuelType: fuelTypeSchema,
   transmission: Joi.string().valid("manual", "automatic"),
   isAC: Joi.boolean(),
+  condition: Joi.string().valid("new", "old"),
   color: Joi.string().trim(),
   features: Joi.array().items(Joi.string()),
   location: locationSchema,

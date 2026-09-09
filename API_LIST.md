@@ -632,6 +632,7 @@ http://localhost:8000/api/v1/vehicle/{web|app}
 | `transmission` | String | `manual` \| `automatic` |
 | `fuelType` | String or String[] | `petrol`, `diesel`, `cng`, `electric`, `hybrid` — a vehicle can have more than one (e.g. hybrid + electric); pass once for a single value or repeat the param (`fuelType=petrol&fuelType=diesel`) to match ANY of several |
 | `availability` | String | `available`, `assigned`, `on-trip`, `maintenance` |
+| `condition` | String | `new` \| `old` |
 | `page` / `limit` | Number | Pagination |
 | `sortBy` | String | `modelYear` \| `createdAt` (price sort not supported — see note below) |
 | `sortOrder` | String | `asc` \| `desc` |
@@ -677,6 +678,7 @@ GET /f7d642a1-471a-44cb-a2db-9c2a3fcffdb3
   "fuelType": ["petrol"],
   "transmission": "automatic",
   "isAC": true,
+  "condition": "new",
   "color": "White",
   "features": ["Bluetooth", "GPS", "Reverse Camera"],
   "location": { "address": "Gulshan 1", "city": "Dhaka", "district": "Dhaka" },
@@ -690,6 +692,10 @@ GET /f7d642a1-471a-44cb-a2db-9c2a3fcffdb3
 > **Important — `categoryId` is required.** Create a vehicle category first (§2) and
 > pass its `id` here — the old free-text `category` field no longer exists; categories
 > are now a real table with a foreign key.
+
+> **`condition`** is `"new"` or `"old"` (defaults to `"new"`) — new vehicles are priced
+> higher than old ones in the same category. Used by the Pricing module (§14) to pick the
+> right base/extra rates for a vehicle.
 
 > **`fuelType` is an array**, not a single string — a vehicle can support more than one
 > fuel type (e.g. `["hybrid", "electric"]`). At least one value required.
@@ -1145,35 +1151,53 @@ http://localhost:8000/api/v1/tourist-spot/{web|app}
 
 ## 14. Pricing Module
 
-A generic per-km/per-hour/per-day rate table (`PricingRule`), optionally scoped by
-`tripType`, `categoryId`, and/or `vehicleId` (all three are optional — a rule with none of
-them set is a platform-wide default for that trip type). The public site's "distance +
-trip type -> estimated price" preview (shown once a customer has picked a pickup/drop-off
-and the distance is known from the Maps module, §9) reads the active rule for the selected
-`tripType`.
+A base-package rate table (`PricingRule`) keyed by **vehicle category + vehicle condition**
+(`new` or `old` — see Vehicle's `condition` field, §7). Each rule names a base package —
+so much included time and distance for a flat price — plus overage rates for anything
+beyond it:
+
+| Field | Meaning | Example |
+|---|---|---|
+| `categoryId` | Which vehicle category this rule prices | Sedan |
+| `vehicleCondition` | `new` or `old` — new vehicles are priced higher | `new` |
+| `basePrice` | Flat price for the base package | ৳3,500 |
+| `baseHours` | Hours included in the base package (a minimum booking block, not reduced if the trip is shorter) | 8 |
+| `includedKm` | Distance included in the base package | 80 km |
+| `extraKmCharge` | Rate per km once `includedKm` is exceeded | ৳20/km |
+| `extraHourPrice` | Rate per hour once `baseHours` is exceeded | ৳200/hour |
+
+**Total price** for a trip of `distanceKm`/`durationHours` in this category+condition:
+```
+total = basePrice
+      + max(0, distanceKm - includedKm) * extraKmCharge
+      + max(0, durationHours - baseHours) * extraHourPrice
+```
+e.g. a 217 km, 5-hour Dhaka→Chattogram trip in a new Sedan (base 8h/80km/৳3,500, extra
+৳20/km, ৳200/hour): distance exceeds includedKm by 137 km (+৳2,740) but duration is under
+baseHours (no extra-hour charge) → total ৳6,240. The public site computes this per vehicle
+card once a route's distance/duration is known (Maps module, §9), then checks for a
+matching active Offer (§12) and applies its discount on top before showing the final price.
 
 ### Base URL
 ```
 http://localhost:8000/api/v1/pricing/{web|app}
 ```
 
-### The customer-facing "view price" range
+### The customer-facing "view price" range (legacy, still supported)
 
-Alongside the real billing rate (`perKmRate`), a rule carries `viewPriceLowOffset` and
-`viewPriceHighOffset` — flat currency amounts subtracted from / added to the computed
-estimate (`perKmRate * distanceKm`) to produce the range actually shown to the customer,
-e.g. an estimate of ৳260 with `viewPriceLowOffset=100`/`viewPriceHighOffset=140` displays as
-"৳160 - ৳400". This lets the shown range be wider or narrower than the raw estimate without
-touching the real rate used for billing. Both default to `100` on create if omitted.
+A rule also carries `viewPriceLowOffset`/`viewPriceHighOffset` — flat amounts
+subtracted/added to a `perKmRate`-based estimate for callers still using that older,
+simpler per-km model. Both default to `100` on create if omitted. Not used by the
+category+condition base-package flow above.
 
 ### List / filter pricing rules
 
 **Endpoint:** `GET /`
 **Authentication:** ❌ Public
-**Optional query params:** `tripType` (`single` \| `round` \| `down`), `categoryId`,
-`vehicleId`, `isActive`
+**Optional query params:** `categoryId`, `vehicleCondition` (`new` \| `old`), `tripType`
+(`single` \| `round` \| `down`), `vehicleId`, `isActive`
 ```
-GET /pricing/app/?tripType=round&isActive=true
+GET /pricing/app/?categoryId=<id>&vehicleCondition=new&isActive=true
 ```
 
 ### Create / update pricing rule
@@ -1182,18 +1206,22 @@ GET /pricing/app/?tripType=round&isActive=true
 **Authentication:** ✅ `TOKEN_ADMIN` (superadmin only)
 ```json
 {
-  "name": "Round Trip Pricing",
-  "tripType": "round",
-  "perKmRate": 30,
-  "viewPriceLowOffset": 100,
-  "viewPriceHighOffset": 140,
+  "name": "Sedan - New",
+  "categoryId": "<sedan-category-id>",
+  "vehicleCondition": "new",
+  "basePrice": 3500,
+  "baseHours": 8,
+  "includedKm": 80,
+  "extraKmCharge": 20,
+  "extraHourPrice": 200,
   "isActive": true
 }
 ```
-`name` and `perKmRate` are the only fields the admin panel's Price Configuration screen
-sets in practice; `perHourRate`/`perDayRate`/`driverCharge`/`waitingCharge`/`extraKmCharge`/
-`nightCharge`/`serviceCharge`/`taxPercent` exist for future/other pricing UIs and are left
-unset here.
+`name`, `categoryId`, `vehicleCondition`, `basePrice`, `baseHours`, `includedKm`,
+`extraKmCharge`, and `extraHourPrice` are what the admin panel's Price Configuration screen
+sets. `tripType`/`vehicleId`/`perKmRate`/`perHourRate`/`perDayRate`/`driverCharge`/
+`waitingCharge`/`nightCharge`/`serviceCharge`/`taxPercent`/`viewPriceLowOffset`/
+`viewPriceHighOffset` remain available for other/future pricing UIs and are left unset here.
 
 ### Get one / list everything / delete
 

@@ -36,6 +36,7 @@ const SELECT = {
   isAC: true,
   features: true,
   color: true,
+  condition: true,
   location: true,
   estimatedRentalRate: true,
   availabilityStatus: true,
@@ -66,6 +67,7 @@ const search = async ({
   transmission,
   fuelType,
   availability,
+  condition,
   page,
   limit,
   sortBy,
@@ -76,6 +78,8 @@ const search = async ({
       ? toAvailabilityEnum(availability)
       : { in: PUBLICLY_VISIBLE_STATUSES },
   };
+
+  if (condition) where.condition = condition;
 
   if (searchTerm) {
     where.OR = [
@@ -196,6 +200,7 @@ const create = async (payload, userId) => {
       isAC: payload.isAC ?? true,
       features: payload.features || [],
       color: payload.color || null,
+      condition: payload.condition || "new",
       location: payload.location ?? null,
       estimatedRentalRate: payload.estimatedRentalRate ?? null,
       availabilityStatus: toAvailabilityEnum(payload.availabilityStatus) || "pending",
@@ -229,6 +234,7 @@ const FIELD_MAP = {
   isAC: "isAC",
   features: "features",
   color: "color",
+  condition: "condition",
   location: "location",
   estimatedRentalRate: "estimatedRentalRate",
   availabilityStatus: "availabilityStatus",
