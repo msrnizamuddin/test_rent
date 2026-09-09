@@ -14,6 +14,7 @@ const handle = (fn) => async (req, res, next) => {
 };
 
 export const autocomplete = handle(async (req) => {
+  console.log("req.body", req.body);
   const { input, sessionToken } = req.query;
   const data = await mapsService.autocomplete(input, sessionToken);
   return { message: "Location suggestions fetched successfully", data };
