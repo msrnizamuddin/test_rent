@@ -39,6 +39,14 @@ router.post("/customer", validate(signupValidation), controller.signup);
 // application/review table.
 router.post("/driver", validate(signupDriverValidation), controller.signupDriver);
 
+// Driver marks their profile+documents ready for admin review.
+router.post(
+  "/driver/submit-for-review",
+  authenticate,
+  authorize("driver"),
+  controller.submitForReview,
+);
+
 // One-time bootstrap: create the first superadmin. No auth required —
 // protected by SETUP_SECRET and blocked once a superadmin already exists.
 router.post(

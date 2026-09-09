@@ -15,6 +15,7 @@ import { validate } from "../../../middleware/validate.middleware.js";
 import {
   authenticate,
   authorize,
+  requireVerifiedDriver,
 } from "../../../middleware/authenticate.middleware.js";
 
 const router = express.Router();
@@ -53,6 +54,7 @@ router.patch(
   "/:tripId/driver-action",
   authenticate,
   authorize("driver"),
+  requireVerifiedDriver,
   validate(tripIdParamValidation, "params"),
   validate(driverActionValidation),
   controller.driverAction,
@@ -63,6 +65,7 @@ router.patch(
   "/:tripId/location",
   authenticate,
   authorize("driver"),
+  requireVerifiedDriver,
   validate(tripIdParamValidation, "params"),
   validate(updateLocationValidation),
   controller.updateLocation,

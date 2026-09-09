@@ -27,9 +27,15 @@ export const signupDriver = handle(async (req) => {
   const data = await authService.signupDriver(req.body);
   return {
     statusCode: 201,
-    message: "Registration received. Your account will be activated after admin review.",
+    message:
+      "Registration successful. Please log in and submit your documents for verification.",
     data,
   };
+});
+
+export const submitForReview = handle(async (req) => {
+  const data = await authService.submitForReview(req.user.id);
+  return { message: "Submitted for review. Our team will verify your documents shortly.", data };
 });
 
 export const bootstrapSuperAdmin = handle(async (req) => {

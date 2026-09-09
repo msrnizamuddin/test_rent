@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { requiredMessage } from "../../../utils/joi-messages.js";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 
@@ -10,12 +11,12 @@ export const searchDocumentValidation = Joi.object({
 });
 
 export const documentIdParamValidation = Joi.object({
-  documentId: objectId.required(),
+  documentId: objectId.required().messages(requiredMessage("Document id")),
 });
 
 export const ownerParamValidation = Joi.object({
-  ownerType: Joi.string().valid("user", "vehicle").required(),
-  ownerId: objectId.required(),
+  ownerType: Joi.string().valid("user", "vehicle").required().messages(requiredMessage("Owner type")),
+  ownerId: objectId.required().messages(requiredMessage("Owner id")),
 });
 
 // ownerId is required when ownerType is "vehicle". When ownerType is "user"
@@ -23,9 +24,13 @@ export const ownerParamValidation = Joi.object({
 // user's id to upload on their behalf (see document.service.js's upload()).
 export const uploadDocumentValidation = Joi.object({
   ownerType: Joi.string().valid("user", "vehicle").optional(),
-  ownerId: objectId.when("ownerType", { is: "vehicle", then: Joi.required(), otherwise: Joi.optional() }),
-  category: Joi.string().trim().required(),
-  fileUrl: Joi.string().uri().required(),
+  ownerId: objectId.when("ownerType", {
+    is: "vehicle",
+    then: Joi.required().messages(requiredMessage("Owner id")),
+    otherwise: Joi.optional(),
+  }),
+  category: Joi.string().trim().required().messages(requiredMessage("Category")),
+  fileUrl: Joi.string().uri().required().messages(requiredMessage("File URL")),
   expiryDate: Joi.date().optional(),
 });
 
@@ -34,11 +39,15 @@ export const uploadDocumentValidation = Joi.object({
 // this only covers req.body.
 export const uploadDocumentFileValidation = Joi.object({
   ownerType: Joi.string().valid("user", "vehicle").optional(),
-  ownerId: objectId.when("ownerType", { is: "vehicle", then: Joi.required(), otherwise: Joi.optional() }),
-  category: Joi.string().trim().required(),
+  ownerId: objectId.when("ownerType", {
+    is: "vehicle",
+    then: Joi.required().messages(requiredMessage("Owner id")),
+    otherwise: Joi.optional(),
+  }),
+  category: Joi.string().trim().required().messages(requiredMessage("Category")),
   expiryDate: Joi.date().optional(),
 });
 
 export const rejectDocumentValidation = Joi.object({
-  rejectionReason: Joi.string().trim().required(),
+  rejectionReason: Joi.string().trim().required().messages(requiredMessage("Rejection reason")),
 });

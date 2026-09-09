@@ -31,10 +31,16 @@ model User {
 
   isVerified    Boolean       @default(false) @map("is_verified")
   centralStatus CentralStatus @default(active) @map("central_status")
+  // Required admin-provided cause whenever centralStatus is set to
+  // "inactive" — shown back to the driver on a blocked login attempt.
+  inactiveReason String?      @map("inactive_reason")
   isActivated   Boolean       @default(false) @map("is_activated")
   lastLoginAt   DateTime?     @map("last_login_at") @db.Timestamptz
 
   driverStatus DriverStatus? @map("driver_status")
+  // Set once a driver submits their completed profile + documents for
+  // admin review (see auth.service.js submitForReview). Null until then.
+  profileSubmittedAt DateTime? @map("profile_submitted_at") @db.Timestamptz
 
   otpCode      String?     @map("otp_code")
   otpPurpose   OtpPurpose? @map("otp_purpose")

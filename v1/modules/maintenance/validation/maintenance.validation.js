@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { requiredMessage } from "../../../utils/joi-messages.js";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 
@@ -8,13 +9,13 @@ export const searchMaintenanceValidation = Joi.object({
 });
 
 export const maintenanceIdParamValidation = Joi.object({
-  maintenanceId: objectId.required(),
+  maintenanceId: objectId.required().messages(requiredMessage("Maintenance id")),
 });
 
 export const createMaintenanceValidation = Joi.object({
-  vehicleId: objectId.required(),
-  maintenanceType: Joi.string().trim().required(),
-  serviceDate: Joi.date().required(),
+  vehicleId: objectId.required().messages(requiredMessage("Vehicle id")),
+  maintenanceType: Joi.string().trim().required().messages(requiredMessage("Maintenance type")),
+  serviceDate: Joi.date().required().messages(requiredMessage("Service date")),
   nextServiceDate: Joi.date().optional(),
   cost: Joi.number().min(0).optional(),
   notes: Joi.string().trim().allow("").optional(),

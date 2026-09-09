@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { requiredMessage } from "../../../utils/joi-messages.js";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 
@@ -19,15 +20,15 @@ const addressSchema = Joi.object({
 });
 
 const identificationSchema = Joi.object({
-  type: Joi.string().valid("nid", "passport").required(),
-  number: Joi.string().trim().required(),
+  type: Joi.string().valid("nid", "passport").required().messages(requiredMessage("Identification type")),
+  number: Joi.string().trim().required().messages(requiredMessage("Identification number")),
   frontImage: Joi.string().uri().optional(),
   backImage: Joi.string().uri().optional(),
   expiryDate: Joi.date().optional(),
 });
 
 const drivingLicenseSchema = Joi.object({
-  number: Joi.string().trim().required(),
+  number: Joi.string().trim().required().messages(requiredMessage("Driving license number")),
   issueDate: Joi.date().optional(),
   expiryDate: Joi.date().optional(),
   frontImage: Joi.string().uri().optional(),
@@ -48,18 +49,26 @@ const permissionsSchema = Joi.object({
 // Public self-signup: always role "customer". Super Admin creates manager/driver
 // accounts separately via createStaffValidation below.
 export const signupValidation = Joi.object({
-  fullName: Joi.string().trim().required(),
+  fullName: Joi.string().trim().required().messages(requiredMessage("Full name")),
   mobileNumber: Joi.string()
     .length(11)
     .pattern(/^01[3-9]\d{8}$/)
-    .required(),
+    .required()
+    .messages({
+      ...requiredMessage("Mobile number"),
+      "string.length": "Mobile number must be 11 digits",
+      "string.pattern.base": "Enter a valid Bangladeshi mobile number (01XXXXXXXXX)",
+    }),
   email: Joi.string().email().optional(),
 
-  password: Joi.string().min(8).required(),
+  password: Joi.string().min(8).required().messages({
+    ...requiredMessage("Password"),
+    "string.min": "Password must be at least 8 characters",
+  }),
   confirmPassword: Joi.string()
     .valid(Joi.ref("password"))
     .required()
-    .messages({ "any.only": "confirmPassword must match password" }),
+    .messages({ ...requiredMessage("Confirm password"), "any.only": "confirmPassword must match password" }),
 
   address: addressSchema.optional(),
 
@@ -71,42 +80,58 @@ export const signupValidation = Joi.object({
   documents: Joi.array()
     .items(
       Joi.object({
-        title: Joi.string().trim().required(),
-        fileUrl: Joi.string().uri().required(),
+        title: Joi.string().trim().required().messages(requiredMessage("Document title")),
+        fileUrl: Joi.string().uri().required().messages(requiredMessage("Document file URL")),
       }),
     )
     .optional(),
 });
 
-// Public self-signup for drivers: creates the User immediately but inactive
-// (see authService.signupDriver) — an admin activates it from the Drivers
-// list, no separate approve/reject flow.
+// Public self-signup for drivers: creates the User immediately but active
+// and unverified (see authService.signupDriver) — a driver completes their
+// profile/documents and an admin approves via updateAccountControl.
 export const signupDriverValidation = Joi.object({
-  fullName: Joi.string().trim().required(),
+  fullName: Joi.string().trim().required().messages(requiredMessage("Full name")),
   mobileNumber: Joi.string()
     .length(11)
     .pattern(/^01[3-9]\d{8}$/)
-    .required(),
+    .required()
+    .messages({
+      ...requiredMessage("Mobile number"),
+      "string.length": "Mobile number must be 11 digits",
+      "string.pattern.base": "Enter a valid Bangladeshi mobile number (01XXXXXXXXX)",
+    }),
   email: Joi.string().email().optional(),
-  licenseNumber: Joi.string().trim().required(),
-  password: Joi.string().min(8).required(),
+  licenseNumber: Joi.string().trim().required().messages(requiredMessage("License number")),
+  password: Joi.string().min(8).required().messages({
+    ...requiredMessage("Password"),
+    "string.min": "Password must be at least 8 characters",
+  }),
 });
 
 // Super Admin creating a Manager, Driver, or another Super Admin account
 export const createStaffValidation = Joi.object({
-  role: Joi.string().valid("superadmin", "manager", "driver").required(),
+  role: Joi.string().valid("superadmin", "manager", "driver").required().messages(requiredMessage("Role")),
 
-  fullName: Joi.string().trim().required(),
+  fullName: Joi.string().trim().required().messages(requiredMessage("Full name")),
   fatherName: Joi.string().trim().optional(),
   motherName: Joi.string().trim().optional(),
   dateOfBirth: Joi.date().optional(),
   mobileNumber: Joi.string()
     .length(11)
     .pattern(/^01[3-9]\d{8}$/)
-    .required(),
+    .required()
+    .messages({
+      ...requiredMessage("Mobile number"),
+      "string.length": "Mobile number must be 11 digits",
+      "string.pattern.base": "Enter a valid Bangladeshi mobile number (01XXXXXXXXX)",
+    }),
   email: Joi.string().email().optional(),
 
-  password: Joi.string().min(8).required(),
+  password: Joi.string().min(8).required().messages({
+    ...requiredMessage("Password"),
+    "string.min": "Password must be at least 8 characters",
+  }),
 
   address: addressSchema.optional(),
   identification: identificationSchema.optional(),
@@ -114,7 +139,7 @@ export const createStaffValidation = Joi.object({
   // required when role === "driver"
   drivingLicense: Joi.when("role", {
     is: "driver",
-    then: drivingLicenseSchema.required(),
+    then: drivingLicenseSchema.required().messages(requiredMessage("Driving license")),
     otherwise: drivingLicenseSchema.optional(),
   }),
 
@@ -133,20 +158,28 @@ export const createStaffValidation = Joi.object({
 // One-time bootstrap: create the very first superadmin (no auth required,
 // gated by SETUP_SECRET + only works while zero superadmins exist)
 export const bootstrapSuperAdminValidation = Joi.object({
-  setupKey: Joi.string().required(),
-  fullName: Joi.string().trim().required(),
+  setupKey: Joi.string().required().messages(requiredMessage("Setup key")),
+  fullName: Joi.string().trim().required().messages(requiredMessage("Full name")),
   mobileNumber: Joi.string()
     .length(11)
     .pattern(/^01[3-9]\d{8}$/)
-    .required(),
+    .required()
+    .messages({
+      ...requiredMessage("Mobile number"),
+      "string.length": "Mobile number must be 11 digits",
+      "string.pattern.base": "Enter a valid Bangladeshi mobile number (01XXXXXXXXX)",
+    }),
   email: Joi.string().email().optional(),
-  password: Joi.string().min(8).required(),
+  password: Joi.string().min(8).required().messages({
+    ...requiredMessage("Password"),
+    "string.min": "Password must be at least 8 characters",
+  }),
 });
 
 // ---------------- 1.2 User Authentication ----------------
 export const loginValidation = Joi.object({
-  emailOrPhone: emailOrPhone.required(),
-  password: Joi.string().required(),
+  emailOrPhone: emailOrPhone.required().messages(requiredMessage("Email or phone")),
+  password: Joi.string().required().messages(requiredMessage("Password")),
 });
 
 export const logoutValidation = Joi.object({
@@ -154,42 +187,53 @@ export const logoutValidation = Joi.object({
 });
 
 export const forgotPasswordValidation = Joi.object({
-  emailOrPhone: emailOrPhone.required(),
+  emailOrPhone: emailOrPhone.required().messages(requiredMessage("Email or phone")),
 });
 
 export const resetPasswordValidation = Joi.object({
-  resetPasswordToken: Joi.string().required(),
-  newPassword: Joi.string().min(8).required(),
+  resetPasswordToken: Joi.string().required().messages(requiredMessage("Reset password token")),
+  newPassword: Joi.string().min(8).required().messages({
+    ...requiredMessage("New password"),
+    "string.min": "Password must be at least 8 characters",
+  }),
   confirmPassword: Joi.string()
     .valid(Joi.ref("newPassword"))
     .required()
-    .messages({ "any.only": "confirmPassword must match newPassword" }),
+    .messages({ ...requiredMessage("Confirm password"), "any.only": "confirmPassword must match newPassword" }),
 });
 
 export const changePasswordValidation = Joi.object({
-  oldPassword: Joi.string().required(),
-  newPassword: Joi.string().min(8).required(),
+  oldPassword: Joi.string().required().messages(requiredMessage("Old password")),
+  newPassword: Joi.string().min(8).required().messages({
+    ...requiredMessage("New password"),
+    "string.min": "Password must be at least 8 characters",
+  }),
   confirmPassword: Joi.string()
     .valid(Joi.ref("newPassword"))
     .required()
-    .messages({ "any.only": "confirmPassword must match newPassword" }),
+    .messages({ ...requiredMessage("Confirm password"), "any.only": "confirmPassword must match newPassword" }),
 });
 
 export const otpVerificationValidation = Joi.object({
-  emailOrPhone: emailOrPhone.required(),
-  code: Joi.string().length(6).pattern(/^\d+$/).required(),
+  emailOrPhone: emailOrPhone.required().messages(requiredMessage("Email or phone")),
+  code: Joi.string().length(6).pattern(/^\d+$/).required().messages({
+    ...requiredMessage("OTP code"),
+    "string.length": "OTP code must be 6 digits",
+    "string.pattern.base": "OTP code must contain only digits",
+  }),
   purpose: Joi.string()
     .valid("registration", "login", "reset-password", "change-mobile")
-    .required(),
+    .required()
+    .messages(requiredMessage("Purpose")),
 });
 
 export const accountActivationValidation = Joi.object({
-  userId: objectId.required(),
-  verificationToken: Joi.string().required(),
+  userId: objectId.required().messages(requiredMessage("User id")),
+  verificationToken: Joi.string().required().messages(requiredMessage("Verification token")),
 });
 
 export const accountDeactivationValidation = Joi.object({
-  userId: objectId.required(),
+  userId: objectId.required().messages(requiredMessage("User id")),
   reason: Joi.string().trim().optional(),
 });
 
@@ -229,6 +273,18 @@ export const updateAccountControlValidation = Joi.object({
     "suspended",
     "inactive",
   ),
+  // Required when centralStatus is being set to "inactive" — see
+  // authService.updateAccountControl. Shown back to the driver on a
+  // blocked login attempt.
+  reason: Joi.when("centralStatus", {
+    is: "inactive",
+    then: Joi.string().trim().min(3).required().messages({
+      "any.required": "A reason is required when deactivating an account",
+      "string.empty": "A reason is required when deactivating an account",
+      "string.min": "Reason must be at least 3 characters",
+    }),
+    otherwise: Joi.string().trim().optional(),
+  }),
 }).min(1);
 
 // Super Admin / Manager editing any user's own personal/document details —
@@ -250,7 +306,7 @@ export const updateUserProfileValidation = Joi.object({
 }).min(1);
 
 export const updateProfilePictureValidation = Joi.object({
-  profilePicture: Joi.string().uri().required(),
+  profilePicture: Joi.string().uri().required().messages(requiredMessage("Profile picture URL")),
 });
 
 export const updateContactValidation = Joi.object({

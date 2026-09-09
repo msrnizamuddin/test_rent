@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { requiredMessage } from "../../../utils/joi-messages.js";
 
 const objectId = Joi.string().guid({ version: "uuidv4" });
 
@@ -12,18 +13,18 @@ export const searchOfferValidation = Joi.object({
 });
 
 export const offerIdParamValidation = Joi.object({
-  offerId: objectId.required(),
+  offerId: objectId.required().messages(requiredMessage("Offer id")),
 });
 
 export const createOfferValidation = Joi.object({
-  title: Joi.string().trim().required(),
+  title: Joi.string().trim().required().messages(requiredMessage("Title")),
   subtitle: Joi.string().trim().allow("", null).optional(),
   tripType: Joi.string().valid(...TRIP_TYPES).optional(),
   status: Joi.string().valid(...OFFER_STATUSES).optional(),
   fromLocation: Joi.string().trim().allow("", null).optional(),
   toLocation: Joi.string().trim().allow("", null).optional(),
   discountType: Joi.string().valid(...DISCOUNT_TYPES).optional(),
-  discountValue: Joi.number().min(0).required(),
+  discountValue: Joi.number().min(0).required().messages(requiredMessage("Discount value")),
   startDate: Joi.date().optional(),
   endDate: Joi.date().optional(),
   bannerImage: Joi.string().uri().allow("", null).optional(),

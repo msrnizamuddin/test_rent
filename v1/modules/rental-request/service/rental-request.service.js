@@ -209,6 +209,9 @@ const assignDriver = async (requestId, { driverId }) => {
 
   const driver = await User.findById(driverId);
   if (!driver || driver.role !== "driver") throw buildError("Driver not found", 404);
+  if (!driver.isVerified) {
+    throw buildError("Cannot assign an unverified driver — approve their documents first", 400);
+  }
 
   const [reqOverlap, tripOverlap] = await Promise.all([
     RentalRequest.driverHasOverlap(
