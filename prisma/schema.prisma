@@ -173,6 +173,9 @@ model Vehicle {
   isAC                Boolean                   @default(true) @map("is_ac")
   features            String[]                  @default([])
   color               String?
+  // New vehicles command a higher price than old ones for the same
+  // category — used by PricingRule to pick the right base/extra rates.
+  condition           VehicleCondition          @default(new) @map("condition")
   location            Json?
   estimatedRentalRate Json?                     @map("estimated_rental_rate")
   availabilityStatus  VehicleAvailabilityStatus @default(pending) @map("availability_status")
@@ -214,6 +217,13 @@ model Vehicle {
   @@index([assignedDriverId])
   @@index([ownerDriverId])
   @@map("vehicles")
+}
+
+enum VehicleCondition {
+  new
+  old
+
+  @@map("vehicle_condition")
 }
 
 enum VehicleType {
@@ -638,17 +648,31 @@ enum TicketStatus {
 // 13. Pricing Rules
 // ---------------------------------------------------------------------------
 model PricingRule {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String            @id @default(uuid()) @db.Uuid
   name       String
-  tripType   TripType? @map("trip_type")
-  categoryId String?  @map("category_id") @db.Uuid
-  vehicleId  String?  @map("vehicle_id") @db.Uuid
+  tripType   TripType?         @map("trip_type")
+  categoryId String?           @map("category_id") @db.Uuid
+  vehicleId  String?           @map("vehicle_id") @db.Uuid
+  // The primary pricing engine: a rule is looked up by (categoryId,
+  // vehicleCondition) for the vehicle being priced. Null matches any
+  // condition.
+  vehicleCondition VehicleCondition? @map("vehicle_condition")
+
+  // Base package: basePrice covers up to baseHours and includedKm: a
+  // Sedan (new) might be "8 hours / 80 km for ৳3,500". Anything beyond
+  // either limit is charged at the matching extra rate below.
+  basePrice  Decimal? @map("base_price") @db.Decimal
+  baseHours  Decimal? @map("base_hours") @db.Decimal
+  includedKm Decimal? @map("included_km") @db.Decimal
+
+  extraHourPrice Decimal? @map("extra_hour_price") @db.Decimal
 
   perKmRate      Decimal? @map("per_km_rate") @db.Decimal
   perHourRate    Decimal? @map("per_hour_rate") @db.Decimal
   perDayRate     Decimal? @map("per_day_rate") @db.Decimal
   driverCharge   Decimal? @map("driver_charge") @db.Decimal
   waitingCharge  Decimal? @map("waiting_charge") @db.Decimal
+  // Extra KM Price — the per-km rate charged once includedKm is exceeded.
   extraKmCharge  Decimal? @map("extra_km_charge") @db.Decimal
   nightCharge    Decimal? @map("night_charge") @db.Decimal
   serviceCharge  Decimal? @map("service_charge") @db.Decimal
@@ -668,6 +692,7 @@ model PricingRule {
 
   @@index([categoryId])
   @@index([vehicleId])
+  @@index([categoryId, vehicleCondition])
   @@map("pricing_rules")
 }
 
