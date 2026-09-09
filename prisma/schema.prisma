@@ -654,6 +654,13 @@ model PricingRule {
   serviceCharge  Decimal? @map("service_charge") @db.Decimal
   taxPercent     Decimal? @map("tax_percent") @db.Decimal
 
+  // The customer-facing "estimated" figure is perKmRate * distance. These
+  // two let the shown range be wider/narrower than the raw estimate
+  // without changing the actual rate used for billing — e.g. estimate
+  // ৳260 shown as "৳160 - ৳400" with lowOffset=100, highOffset=140.
+  viewPriceLowOffset  Decimal? @map("view_price_low_offset") @db.Decimal
+  viewPriceHighOffset Decimal? @map("view_price_high_offset") @db.Decimal
+
   isActive Boolean @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz

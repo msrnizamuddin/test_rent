@@ -25,6 +25,8 @@ const rateFields = {
   nightCharge: Joi.number().min(0),
   serviceCharge: Joi.number().min(0),
   taxPercent: Joi.number().min(0).max(100),
+  viewPriceLowOffset: Joi.number().min(0),
+  viewPriceHighOffset: Joi.number().min(0),
 };
 
 export const createPricingValidation = Joi.object({

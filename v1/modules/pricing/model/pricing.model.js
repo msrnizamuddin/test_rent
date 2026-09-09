@@ -15,6 +15,8 @@ const SELECT = {
   nightCharge: true,
   serviceCharge: true,
   taxPercent: true,
+  viewPriceLowOffset: true,
+  viewPriceHighOffset: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -56,6 +58,10 @@ const create = async (payload) =>
       nightCharge: payload.nightCharge ?? null,
       serviceCharge: payload.serviceCharge ?? null,
       taxPercent: payload.taxPercent ?? null,
+      // Default to a symmetric ±100 display range around the estimate
+      // when the admin doesn't set custom offsets.
+      viewPriceLowOffset: payload.viewPriceLowOffset ?? 100,
+      viewPriceHighOffset: payload.viewPriceHighOffset ?? 100,
       isActive: payload.isActive ?? true,
     },
     select: SELECT,
@@ -75,6 +81,8 @@ const FIELD_MAP = {
   nightCharge: "nightCharge",
   serviceCharge: "serviceCharge",
   taxPercent: "taxPercent",
+  viewPriceLowOffset: "viewPriceLowOffset",
+  viewPriceHighOffset: "viewPriceHighOffset",
   isActive: "isActive",
 };
 
