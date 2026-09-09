@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../../../config/db.js";
 
 // Prisma enum member names can't contain hyphens, so the "on-trip" value
@@ -120,6 +121,10 @@ const search = async ({
         { location: { path: ["district"], string_contains: token, mode: "insensitive" } },
         { location: { path: ["address"], string_contains: token, mode: "insensitive" } },
       ]),
+      // location is optional on a vehicle — a listing that never filled it
+      // in isn't a "no match", it's "unknown", so it stays visible instead
+      // of silently vanishing from every location-scoped search.
+      [{ location: { equals: Prisma.DbNull } }, { location: { equals: Prisma.JsonNull } }],
     );
   }
 

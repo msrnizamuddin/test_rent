@@ -786,13 +786,17 @@ vehicle + driver → a Trip is auto-created** (see §6).
   "passengerCount": 2,
   "driverRequired": false,
   "specialInstructions": "Please arrive 10 minutes early",
-  "contactNumber": "01712345678"
+  "contactNumber": "01712345678",
+  "offeredPrice": 2500
 }
 ```
 `tripType` is `single` | `round` | `down`. For `round` trips, `returnLocation`,
 `returnDate`, and `returnTime` become required. The response includes a computed
 `estimatedRent` breakdown (placeholder pricing model — flat per-km/service-charge
-math, since there's no separate dynamic Pricing module yet).
+math, since there's no separate dynamic Pricing module yet). `offeredPrice` is
+optional — the price the customer is proposing to pay, shown to the admin
+alongside the system estimate so they can accept it as-is (pass it back as
+`finalRent` on confirm) or counter with a different `finalRent`.
 
 **2) Admin confirms**
 ```

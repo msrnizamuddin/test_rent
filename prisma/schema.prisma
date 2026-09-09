@@ -327,6 +327,9 @@ model RentalRequest {
 
   estimatedDistanceKm Decimal? @map("estimated_distance_km") @db.Decimal
   estimatedRent       Json?    @map("estimated_rent")
+  // What the customer proposed to pay, submitted alongside the request —
+  // distinct from finalRent, which is the admin's accepted/countered price.
+  offeredPrice        Decimal? @map("offered_price") @db.Decimal
   finalRent           Decimal? @map("final_rent") @db.Decimal
 
   status RentalRequestStatus @default(draft)

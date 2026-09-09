@@ -43,8 +43,14 @@ const searchVehicles = async (query) => {
 const getAll = async () => Vehicle.getAll();
 
 // ---------------- 2.3 Vehicle Details ----------------
-const getVehicleById = async (vehicleId) => {
-  const vehicle = await Vehicle.findPubliclyVisibleById(vehicleId);
+// The /web (admin/manager) mount needs to open a vehicle regardless of its
+// status — most obviously right after creating one, while it still
+// defaults to "pending" — whereas /app (public site) must only ever
+// resolve a vehicle a customer could actually see in search results.
+const getVehicleById = async (vehicleId, isAdmin = false) => {
+  const vehicle = isAdmin
+    ? await Vehicle.findById(vehicleId)
+    : await Vehicle.findPubliclyVisibleById(vehicleId);
   if (!vehicle) throw buildError("Vehicle not found or not available", 404);
   return vehicle;
 };
