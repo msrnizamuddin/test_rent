@@ -767,3 +767,28 @@ enum DiscountType {
 
   @@map("discount_type")
 }
+
+// ---------------------------------------------------------------------------
+// Tourist Spots — common/basic fields for now, expand as the feature grows
+// ---------------------------------------------------------------------------
+model TouristSpot {
+  id          String            @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  image       String?
+  location    String?
+  status      TouristSpotStatus @default(active)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([status])
+  @@map("tourist_spots")
+}
+
+enum TouristSpotStatus {
+  active
+  inactive
+
+  @@map("tourist_spot_status")
+}
