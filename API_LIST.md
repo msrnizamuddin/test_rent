@@ -934,8 +934,8 @@ http://localhost:8000/api/v1/document/{web|app}
 | Field | Required | Description |
 |---|---|---|
 | `file` | ✅ | The binary file |
-| `ownerType` | Only for vehicle docs | `"user"` \| `"vehicle"` — omit for "my own document" uploads made while creating a record whose id isn't known yet (e.g. a new driver's NID before the user exists) |
-| `ownerId` | Only if `ownerType` is `"vehicle"` | UUID of the vehicle |
+| `ownerType` | ❌ | `"user"` \| `"vehicle"` — omit for "my own document" uploads made while creating a record whose id isn't known yet (e.g. a new driver's NID before the user exists) |
+| `ownerId` | Required if `ownerType` is `"vehicle"`; optional if `"user"` | UUID of the vehicle, or of the user this document belongs to. For `ownerType: "user"`: omit to upload as yourself; superadmin/manager can pass another user's id to upload on their behalf (e.g. attaching a driver's NID from the driver's edit page). Anyone else passing someone else's id gets `403`. |
 | `category` | ✅ | Free string — use `nid`, `passport`, `driving_license` for driver docs; `vehicle_photo`, `registration_copy`, `tax_token`, `fitness_certificate` for vehicle docs |
 | `expiryDate` | ❌ | ISO date |
 
