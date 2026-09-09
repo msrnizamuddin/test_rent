@@ -215,8 +215,7 @@ export const updateAccountControlValidation = Joi.object({
     "suspended",
     "inactive",
   ),
-  updatedBy: objectId.required(),
-}).min(2); // at least the field being changed + updatedBy
+}).min(1);
 
 // Super Admin / Manager editing any user's own personal/document details —
 // distinct from updateAccountControl (role/status/permissions) and from

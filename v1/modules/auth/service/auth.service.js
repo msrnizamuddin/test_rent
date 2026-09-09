@@ -305,9 +305,11 @@ const updateDrivingLicense = async (userId, drivingLicense) =>
 const updateIdentification = async (userId, identification) =>
   updateProfile(userId, { identification });
 
-// Super Admin: change role / permissions / status of any account
-const updateAccountControl = async (userId, payload) => {
-  const user = await User.updateById(userId, payload);
+// Super Admin: change role / permissions / status of any account.
+// updatedByUserId comes from the authenticated caller (req.user.id) — never
+// trust a client-supplied value for who made the change.
+const updateAccountControl = async (userId, payload, updatedByUserId) => {
+  const user = await User.updateById(userId, { ...payload, updatedBy: updatedByUserId });
   if (!user) throw buildError("User not found", 404);
   return user;
 };

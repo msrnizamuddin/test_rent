@@ -137,6 +137,7 @@ export const updateAccountControl = handle(async (req) => {
   const data = await authService.updateAccountControl(
     req.params.userId,
     req.body,
+    req.user.id,
   );
   return { message: "Account updated successfully", data };
 });
