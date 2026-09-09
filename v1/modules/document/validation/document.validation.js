@@ -18,9 +18,12 @@ export const ownerParamValidation = Joi.object({
   ownerId: objectId.required(),
 });
 
+// ownerId is required when ownerType is "vehicle". When ownerType is "user"
+// it's optional — omitted for self-upload, or an admin can pass another
+// user's id to upload on their behalf (see document.service.js's upload()).
 export const uploadDocumentValidation = Joi.object({
   ownerType: Joi.string().valid("user", "vehicle").optional(),
-  ownerId: objectId.when("ownerType", { is: "vehicle", then: Joi.required(), otherwise: Joi.forbidden() }),
+  ownerId: objectId.when("ownerType", { is: "vehicle", then: Joi.required(), otherwise: Joi.optional() }),
   category: Joi.string().trim().required(),
   fileUrl: Joi.string().uri().required(),
   expiryDate: Joi.date().optional(),
@@ -31,7 +34,7 @@ export const uploadDocumentValidation = Joi.object({
 // this only covers req.body.
 export const uploadDocumentFileValidation = Joi.object({
   ownerType: Joi.string().valid("user", "vehicle").optional(),
-  ownerId: objectId.when("ownerType", { is: "vehicle", then: Joi.required(), otherwise: Joi.forbidden() }),
+  ownerId: objectId.when("ownerType", { is: "vehicle", then: Joi.required(), otherwise: Joi.optional() }),
   category: Joi.string().trim().required(),
   expiryDate: Joi.date().optional(),
 });

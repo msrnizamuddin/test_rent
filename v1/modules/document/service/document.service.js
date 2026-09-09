@@ -27,10 +27,22 @@ const getByOwner = async (ownerType, ownerId) => Document.findByOwner(ownerType,
 
 const upload = async (requester, payload) => {
   const ownerType = payload.ownerType || "user";
-  const ownerId = ownerType === "user" ? requester.id : payload.ownerId;
+  const isAdmin = requester.role === "superadmin" || requester.role === "manager";
 
   if (ownerType === "vehicle" && requester.role === "customer") {
     throw buildError("Access denied", 403);
+  }
+
+  // Self-upload is the default (a driver/customer uploading their own
+  // document never sends ownerId). An admin editing someone else's profile
+  // can explicitly pass that user's id as ownerId to attach the document to
+  // them instead of to the admin's own account.
+  let ownerId = requester.id;
+  if (ownerType === "user" && payload.ownerId && payload.ownerId !== requester.id) {
+    if (!isAdmin) throw buildError("Access denied", 403);
+    ownerId = payload.ownerId;
+  } else if (ownerType === "vehicle") {
+    ownerId = payload.ownerId;
   }
 
   return Document.create({ ...payload, ownerType, ownerId });
