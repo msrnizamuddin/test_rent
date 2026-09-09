@@ -144,6 +144,36 @@ wiring up SMS/email — see §1.6.
 
 ---
 
+### 1.3b Driver Registration ("Become a Driver")
+
+Public self-signup for drivers — no admin token needed to apply, unlike `POST /staff`
+(§1.15). Unlike customer registration there's no OTP step: the account is created
+immediately but `centralStatus: "inactive"`, so login is blocked (`403 Account is
+inactive`) until a superadmin/manager reviews the new driver in the Drivers list and
+flips their status to `active` (§1.18, `PATCH /account/:userId`, or the admin panel's
+status dropdown) — no separate application/approval table.
+
+**Endpoint**
+```
+POST /driver
+```
+**Authentication:** ❌ No token required
+
+**Request Body**
+```json
+{
+  "fullName": "Test Driver",
+  "mobileNumber": "01712345678",
+  "email": "testdriver@example.com",
+  "licenseNumber": "DL-12345",
+  "password": "DriverPass123"
+}
+```
+`email` is optional; everything else is required. Rejected with `409` if a `User`
+already exists with that mobile/email.
+
+---
+
 ### 1.4 Verify OTP
 
 Registration issues a 6-digit OTP (5-minute expiry, `purpose: "registration"`).
@@ -934,8 +964,8 @@ http://localhost:8000/api/v1/document/{web|app}
 | Field | Required | Description |
 |---|---|---|
 | `file` | ✅ | The binary file |
-| `ownerType` | Only for vehicle docs | `"user"` \| `"vehicle"` — omit for "my own document" uploads made while creating a record whose id isn't known yet (e.g. a new driver's NID before the user exists) |
-| `ownerId` | Only if `ownerType` is `"vehicle"` | UUID of the vehicle |
+| `ownerType` | ❌ | `"user"` \| `"vehicle"` — omit for "my own document" uploads made while creating a record whose id isn't known yet (e.g. a new driver's NID before the user exists) |
+| `ownerId` | Required if `ownerType` is `"vehicle"`; optional if `"user"` | UUID of the vehicle, or of the user this document belongs to. For `ownerType: "user"`: omit to upload as yourself; superadmin/manager can pass another user's id to upload on their behalf (e.g. attaching a driver's NID from the driver's edit page). Anyone else passing someone else's id gets `403`. |
 | `category` | ✅ | Free string — use `nid`, `passport`, `driving_license` for driver docs; `vehicle_photo`, `registration_copy`, `tax_token`, `fitness_certificate` for vehicle docs |
 | `expiryDate` | ❌ | ISO date |
 
@@ -1082,6 +1112,7 @@ Every row below exists under both `/web` and `/app`.
 | POST | `/bootstrap-superadmin` | Public + setupKey | Create the first superadmin |
 | POST | `/login` | Public | Login (any role) |
 | POST | `/customer` | Public | Register customer |
+| POST | `/driver` | Public | Driver self-signup — creates the account inactive until an admin activates it (§1) |
 | POST | `/verify-otp` | Public | Verify OTP |
 | POST | `/forgot-password` | Public | Request password reset |
 | POST | `/reset-password` | Public | Reset password |

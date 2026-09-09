@@ -792,3 +792,4 @@ enum TouristSpotStatus {
 
   @@map("tourist_spot_status")
 }
+

@@ -78,6 +78,20 @@ export const signupValidation = Joi.object({
     .optional(),
 });
 
+// Public self-signup for drivers: creates the User immediately but inactive
+// (see authService.signupDriver) — an admin activates it from the Drivers
+// list, no separate approve/reject flow.
+export const signupDriverValidation = Joi.object({
+  fullName: Joi.string().trim().required(),
+  mobileNumber: Joi.string()
+    .length(11)
+    .pattern(/^01[3-9]\d{8}$/)
+    .required(),
+  email: Joi.string().email().optional(),
+  licenseNumber: Joi.string().trim().required(),
+  password: Joi.string().min(8).required(),
+});
+
 // Super Admin creating a Manager, Driver, or another Super Admin account
 export const createStaffValidation = Joi.object({
   role: Joi.string().valid("superadmin", "manager", "driver").required(),
