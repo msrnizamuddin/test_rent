@@ -1040,6 +1040,37 @@ pattern as every other module).
 
 ---
 
+## 13. Tourist Spot Module
+
+Common/basic fields for now (name, description, image, location, status) — same shape and
+CRUD pattern as Vehicle Category (§2); expand as the feature grows.
+
+### Base URL
+```
+http://localhost:8000/api/v1/tourist-spot/{web|app}
+```
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/` | Public | List/filter (`?status=active\|inactive`) |
+| GET | `/all` | Public | List everything |
+| GET | `/:touristSpotId` | Public | Get one |
+| POST | `/` | TOKEN_ADMIN | Create (`name` required) |
+| PATCH | `/:touristSpotId` | TOKEN_ADMIN | Update |
+| DELETE | `/:touristSpotId` | TOKEN_ADMIN | Delete |
+
+```json
+{
+  "name": "Cox's Bazar",
+  "description": "World's longest natural sea beach",
+  "image": "https://res.cloudinary.com/.../coxsbazar.jpg",
+  "location": "Chattogram",
+  "status": "active"
+}
+```
+
+---
+
 ## 📋 Complete API Endpoint Summary
 
 Every row below exists under both `/web` and `/app`.
@@ -1096,6 +1127,17 @@ Every row below exists under both `/web` and `/app`.
 | POST | `/` | TOKEN_ADMIN | Create offer |
 | PATCH | `/:offerId` | TOKEN_ADMIN | Update offer |
 | DELETE | `/:offerId` | TOKEN_ADMIN | Delete offer |
+
+### Tourist Spot — `/api/v1/tourist-spot`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/` | Public | List/filter (`?status=`) |
+| GET | `/all` | Public | List everything |
+| GET | `/:touristSpotId` | Public | Get one |
+| POST | `/` | TOKEN_ADMIN | Create |
+| PATCH | `/:touristSpotId` | TOKEN_ADMIN | Update |
+| DELETE | `/:touristSpotId` | TOKEN_ADMIN | Delete |
 
 ### Vehicle Category — `/api/v1/vehicle-category`
 
