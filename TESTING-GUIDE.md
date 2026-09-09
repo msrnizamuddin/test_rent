@@ -286,31 +286,17 @@ curl.exe -s -X POST http://localhost:8000/api/v1/auth/web/staff `
 ```
 
 By default the new driver's `driverStatus` is `pending`. To make them
-immediately assignable/testable, activate them. **This endpoint requires
-an `updatedBy` field — your own superadmin user ID** (not documented
-anywhere else, and not auto-filled server-side — found this the hard way
-while verifying this guide). Get your own ID first:
-
-**Postman:** `GET http://localhost:8000/api/v1/auth/web/profile` with
-`Authorization: Bearer <token>` — response's `data.id` is your own user ID.
-
-Then activate the driver:
+immediately assignable/testable, activate them:
 
 **Postman:** `PATCH http://localhost:8000/api/v1/auth/web/account/<driverId>`
 ```json
-{
-  "driverStatus": "available",
-  "centralStatus": "active",
-  "updatedBy": "PASTE_YOUR_OWN_SUPERADMIN_USER_ID_HERE"
-}
+{ "driverStatus": "available", "centralStatus": "active" }
 ```
+`updatedBy` is injected server-side from your own token — don't send it.
 
 **PowerShell:**
 ```powershell
-$me = (curl.exe -s http://localhost:8000/api/v1/auth/web/profile -H "Authorization: Bearer $token" | ConvertFrom-Json).data.id
-
-# use the driver id from the previous response's data.id:
-$body = @{ driverStatus = "available"; centralStatus = "active"; updatedBy = $me } | ConvertTo-Json
+$body = @{ driverStatus = "available"; centralStatus = "active" } | ConvertTo-Json
 curl.exe -s -X PATCH "http://localhost:8000/api/v1/auth/web/account/<driverId>" `
   -H "Content-Type: application/json" -H "Authorization: Bearer $token" -d $body
 ```
