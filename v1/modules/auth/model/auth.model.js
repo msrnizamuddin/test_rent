@@ -125,8 +125,11 @@ const findOtherByMobileOrEmail = async (id, mobileNumber, email) =>
 const findOneSuperadmin = async () =>
   prisma.user.findFirst({ where: { role: "superadmin" }, select: { id: true } });
 
+// payload.passwordHash lets a caller that already has a bcrypt hash (e.g.
+// approving a driver application, which hashed the password at submission
+// time rather than storing it in plaintext) skip re-hashing.
 const create = async (payload) => {
-  const hashedPassword = await bcrypt.hash(payload.password, 10);
+  const hashedPassword = payload.passwordHash || (await bcrypt.hash(payload.password, 10));
 
   const user = await prisma.user.create({
     data: {
