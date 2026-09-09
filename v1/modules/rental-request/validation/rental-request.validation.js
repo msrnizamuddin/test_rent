@@ -38,6 +38,9 @@ export const createRentalRequestValidation = Joi.object({
   driverRequired: Joi.boolean().default(false),
   specialInstructions: Joi.string().trim().allow("").optional(),
   contactNumber: Joi.string().trim().required().messages(requiredMessage("Contact number")),
+  // What the customer is proposing to pay — separate from the system's own
+  // estimatedRent and the admin's eventual finalRent.
+  offeredPrice: Joi.number().min(0).optional(),
 });
 
 export const requestIdParamValidation = Joi.object({

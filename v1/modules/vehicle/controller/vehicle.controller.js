@@ -27,7 +27,11 @@ export const searchVehicles = handle(async (req) => {
 
 // ---------------- 2.3 Vehicle Details ----------------
 export const getVehicleById = handle(async (req) => {
-  const data = await vehicleService.getVehicleById(req.params.vehicleId);
+  // This route is mounted at both /web and /app with no other distinction
+  // between them (see route/index.js) — req.baseUrl carries whichever
+  // prefix matched, so that's what tells the two mounts apart here.
+  const isAdmin = req.baseUrl.endsWith("/web");
+  const data = await vehicleService.getVehicleById(req.params.vehicleId, isAdmin);
   return { message: "Vehicle details fetched successfully", data };
 });
 

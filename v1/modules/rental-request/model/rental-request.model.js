@@ -30,6 +30,7 @@ const SELECT = {
   contactNumber: true,
   estimatedDistanceKm: true,
   estimatedRent: true,
+  offeredPrice: true,
   finalRent: true,
   status: true,
   assignedVehicleId: true,
@@ -83,6 +84,7 @@ const create = async (payload, customerId) => {
       contactNumber: payload.contactNumber,
       estimatedDistanceKm: payload.estimatedDistanceKm ?? null,
       estimatedRent: payload.estimatedRent ?? null,
+      offeredPrice: payload.offeredPrice ?? null,
       status: payload.status || "submitted",
     },
     select: SELECT,
@@ -138,6 +140,7 @@ const findAll = async ({ status, customerId, page, limit }) => {
 const FIELD_MAP = {
   vehicleId: "vehicleId",
   estimatedRent: "estimatedRent",
+  offeredPrice: "offeredPrice",
   finalRent: "finalRent",
   status: "status",
   assignedVehicleId: "assignedVehicleId",
