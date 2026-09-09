@@ -144,6 +144,36 @@ wiring up SMS/email — see §1.6.
 
 ---
 
+### 1.3b Driver Registration ("Become a Driver")
+
+Public self-signup for drivers — no admin token needed to apply, unlike `POST /staff`
+(§1.15). Unlike customer registration there's no OTP step: the account is created
+immediately but `centralStatus: "inactive"`, so login is blocked (`403 Account is
+inactive`) until a superadmin/manager reviews the new driver in the Drivers list and
+flips their status to `active` (§1.18, `PATCH /account/:userId`, or the admin panel's
+status dropdown) — no separate application/approval table.
+
+**Endpoint**
+```
+POST /driver
+```
+**Authentication:** ❌ No token required
+
+**Request Body**
+```json
+{
+  "fullName": "Test Driver",
+  "mobileNumber": "01712345678",
+  "email": "testdriver@example.com",
+  "licenseNumber": "DL-12345",
+  "password": "DriverPass123"
+}
+```
+`email` is optional; everything else is required. Rejected with `409` if a `User`
+already exists with that mobile/email.
+
+---
+
 ### 1.4 Verify OTP
 
 Registration issues a 6-digit OTP (5-minute expiry, `purpose: "registration"`).
@@ -1071,51 +1101,6 @@ http://localhost:8000/api/v1/tourist-spot/{web|app}
 
 ---
 
-## 14. Driver Application Module
-
-Public self-service "Become a Driver" flow. There's no public self-registration for driver
-accounts (`POST /auth/web/staff` is admin-only) — instead an applicant submits their details
-here, a superadmin/manager reviews it, and approving creates the real driver `User` for them.
-The applicant's password is hashed at submission time and carried straight over into the
-created account on approval — they log in afterward with the same password they applied with.
-
-### Base URL
-```
-http://localhost:8000/api/v1/driver-application/{web|app}
-```
-
-### Submit application
-
-**Endpoint:** `POST /`
-**Authentication:** ❌ Public
-```json
-{
-  "fullName": "Test Driver",
-  "mobileNumber": "01712345678",
-  "email": "testdriver@example.com",
-  "licenseNumber": "DL-12345",
-  "password": "DriverPass123"
-}
-```
-`email` is optional; everything else is required. `mobileNumber` must be a valid BD mobile
-number (`01[3-9]XXXXXXXX`), `password` at least 8 characters. Rejected with `409` if a `User`
-already exists with that mobile/email, or if another application for that mobile number is
-still `pending`.
-
-### Review applications (superadmin/manager only)
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/` | Search (`?status=pending\|approved\|rejected`) |
-| GET | `/all` | List everything, no filters |
-| GET | `/:applicationId` | Get one |
-| PATCH | `/:applicationId/approve` | Approve — creates the driver `User` |
-| PATCH | `/:applicationId/reject` | Reject (`rejectionReason` required) |
-
-Approve/reject both `409` if the application isn't still `pending` (already reviewed).
-
----
-
 ## 📋 Complete API Endpoint Summary
 
 Every row below exists under both `/web` and `/app`.
@@ -1127,6 +1112,7 @@ Every row below exists under both `/web` and `/app`.
 | POST | `/bootstrap-superadmin` | Public + setupKey | Create the first superadmin |
 | POST | `/login` | Public | Login (any role) |
 | POST | `/customer` | Public | Register customer |
+| POST | `/driver` | Public | Driver self-signup — creates the account inactive until an admin activates it (§1) |
 | POST | `/verify-otp` | Public | Verify OTP |
 | POST | `/forgot-password` | Public | Request password reset |
 | POST | `/reset-password` | Public | Reset password |
@@ -1183,17 +1169,6 @@ Every row below exists under both `/web` and `/app`.
 | POST | `/` | TOKEN_ADMIN | Create |
 | PATCH | `/:touristSpotId` | TOKEN_ADMIN | Update |
 | DELETE | `/:touristSpotId` | TOKEN_ADMIN | Delete |
-
-### Driver Application — `/api/v1/driver-application`
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/` | Public | Submit a "Become a Driver" application |
-| GET | `/` | TOKEN_ADMIN | Search applications (`?status=`) |
-| GET | `/all` | TOKEN_ADMIN | List every application |
-| GET | `/:applicationId` | TOKEN_ADMIN | Get one application |
-| PATCH | `/:applicationId/approve` | TOKEN_ADMIN | Approve — creates the driver `User` |
-| PATCH | `/:applicationId/reject` | TOKEN_ADMIN | Reject (`rejectionReason` required) |
 
 ### Vehicle Category — `/api/v1/vehicle-category`
 
