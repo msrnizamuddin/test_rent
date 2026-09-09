@@ -1143,6 +1143,65 @@ http://localhost:8000/api/v1/tourist-spot/{web|app}
 
 ---
 
+## 14. Pricing Module
+
+A generic per-km/per-hour/per-day rate table (`PricingRule`), optionally scoped by
+`tripType`, `categoryId`, and/or `vehicleId` (all three are optional — a rule with none of
+them set is a platform-wide default for that trip type). The public site's "distance +
+trip type -> estimated price" preview (shown once a customer has picked a pickup/drop-off
+and the distance is known from the Maps module, §9) reads the active rule for the selected
+`tripType`.
+
+### Base URL
+```
+http://localhost:8000/api/v1/pricing/{web|app}
+```
+
+### The customer-facing "view price" range
+
+Alongside the real billing rate (`perKmRate`), a rule carries `viewPriceLowOffset` and
+`viewPriceHighOffset` — flat currency amounts subtracted from / added to the computed
+estimate (`perKmRate * distanceKm`) to produce the range actually shown to the customer,
+e.g. an estimate of ৳260 with `viewPriceLowOffset=100`/`viewPriceHighOffset=140` displays as
+"৳160 - ৳400". This lets the shown range be wider or narrower than the raw estimate without
+touching the real rate used for billing. Both default to `100` on create if omitted.
+
+### List / filter pricing rules
+
+**Endpoint:** `GET /`
+**Authentication:** ❌ Public
+**Optional query params:** `tripType` (`single` \| `round` \| `down`), `categoryId`,
+`vehicleId`, `isActive`
+```
+GET /pricing/app/?tripType=round&isActive=true
+```
+
+### Create / update pricing rule
+
+**Endpoint:** `POST /` (create) / `PATCH /:pricingId` (update)
+**Authentication:** ✅ `TOKEN_ADMIN` (superadmin only)
+```json
+{
+  "name": "Round Trip Pricing",
+  "tripType": "round",
+  "perKmRate": 30,
+  "viewPriceLowOffset": 100,
+  "viewPriceHighOffset": 140,
+  "isActive": true
+}
+```
+`name` and `perKmRate` are the only fields the admin panel's Price Configuration screen
+sets in practice; `perHourRate`/`perDayRate`/`driverCharge`/`waitingCharge`/`extraKmCharge`/
+`nightCharge`/`serviceCharge`/`taxPercent` exist for future/other pricing UIs and are left
+unset here.
+
+### Get one / list everything / delete
+
+`GET /:pricingId` (public), `GET /all` (public, no filters), `DELETE /:pricingId`
+(`TOKEN_ADMIN`).
+
+---
+
 ## 📋 Complete API Endpoint Summary
 
 Every row below exists under both `/web` and `/app`.
@@ -1212,6 +1271,17 @@ Every row below exists under both `/web` and `/app`.
 | POST | `/` | TOKEN_ADMIN | Create |
 | PATCH | `/:touristSpotId` | TOKEN_ADMIN | Update |
 | DELETE | `/:touristSpotId` | TOKEN_ADMIN | Delete |
+
+### Pricing — `/api/v1/pricing`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/` | Public | List/filter (`?tripType=&categoryId=&vehicleId=&isActive=`) |
+| GET | `/all` | Public | List everything |
+| GET | `/:pricingId` | Public | Get one |
+| POST | `/` | TOKEN_ADMIN (superadmin) | Create |
+| PATCH | `/:pricingId` | TOKEN_ADMIN (superadmin) | Update |
+| DELETE | `/:pricingId` | TOKEN_ADMIN (superadmin) | Delete |
 
 ### Vehicle Category — `/api/v1/vehicle-category`
 
