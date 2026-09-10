@@ -103,7 +103,12 @@ router.patch(
 // ---------------- 1.3 Profile ----------------
 router.get("/profile", authenticate, controller.getProfile);
 
-// Super Admin / Manager: list all registered users
+// Super Admin / Manager: list all registered users. This single endpoint
+// backs several different admin screens (Drivers, Customers, Admin Users —
+// see rent_a_car_admin's useUsers hook), each filtered by a different
+// ?role=, so it deliberately stays a coarse role gate rather than one fixed
+// permission module — a manager's real module-scoped access is enforced by
+// each of those *other* modules' own write routes instead.
 router.get(
   "/users",
   authenticate,
@@ -119,7 +124,9 @@ router.get(
   controller.getUserById,
 );
 
-// Super Admin / Manager: edit any user's personal/document details
+// Super Admin / Manager: edit any user's personal/document details — NOT
+// role/permissions/status, see updateAccountControl below (superadmin-only)
+// for those.
 router.patch(
   "/users/:userId",
   authenticate,

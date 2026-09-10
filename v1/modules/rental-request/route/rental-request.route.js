@@ -17,7 +17,7 @@ import {
 import { validate } from "../../../middleware/validate.middleware.js";
 import {
   authenticate,
-  authorize,
+  authorizePermission,
 } from "../../../middleware/authenticate.middleware.js";
 
 const router = express.Router();
@@ -42,19 +42,19 @@ router.get(
 router.get(
   "/",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("bookingManagement"),
   validate(listRentalRequestsValidation, "query"),
   controller.listRentalRequests,
 );
 
 // Safe "get everything" — no filters, no conditions.
-router.get("/all", authenticate, authorize("superadmin", "manager"), controller.getAll);
+router.get("/all", authenticate, authorizePermission("bookingManagement"), controller.getAll);
 
 // ---------------- 13. Admin: Assign Vehicle / Driver ----------------
 router.patch(
   "/:requestId/assign-vehicle",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("bookingManagement"),
   validate(requestIdParamValidation, "params"),
   validate(assignVehicleValidation),
   controller.assignVehicle,
@@ -63,7 +63,7 @@ router.patch(
 router.patch(
   "/:requestId/assign-driver",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("bookingManagement"),
   validate(requestIdParamValidation, "params"),
   validate(assignDriverValidation),
   controller.assignDriver,
@@ -73,7 +73,7 @@ router.patch(
 router.patch(
   "/:requestId/review",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("bookingManagement"),
   validate(requestIdParamValidation, "params"),
   validate(reviewRentalRequestValidation),
   controller.reviewRentalRequest,
@@ -83,7 +83,7 @@ router.patch(
 router.patch(
   "/:requestId/confirm",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("bookingManagement"),
   validate(requestIdParamValidation, "params"),
   validate(confirmRentalRequestValidation),
   controller.confirmRentalRequest,
@@ -93,7 +93,7 @@ router.patch(
 router.patch(
   "/:requestId/reject",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("bookingManagement"),
   validate(requestIdParamValidation, "params"),
   validate(rejectRentalRequestValidation),
   controller.rejectRentalRequest,

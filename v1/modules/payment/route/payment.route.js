@@ -11,12 +11,12 @@ import {
 } from "../validation/payment.validation.js";
 
 import { validate } from "../../../middleware/validate.middleware.js";
-import { authenticate, authorize } from "../../../middleware/authenticate.middleware.js";
+import { authenticate, authorizePermission } from "../../../middleware/authenticate.middleware.js";
 
 const router = express.Router();
 
 // Safe "get everything" — no filters, no conditions.
-router.get("/all", authenticate, authorize("superadmin", "manager"), controller.getAll);
+router.get("/all", authenticate, authorizePermission("paymentManagement"), controller.getAll);
 
 router.post(
   "/",
@@ -28,7 +28,7 @@ router.post(
 router.patch(
   "/:paymentId/status",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("paymentManagement"),
   validate(paymentIdParamValidation, "params"),
   validate(updatePaymentStatusValidation),
   controller.updatePaymentStatus,
@@ -46,7 +46,7 @@ router.get(
 router.get(
   "/",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("paymentManagement"),
   validate(listPaymentsValidation, "query"),
   controller.listPayments,
 );
@@ -54,7 +54,7 @@ router.get(
 router.post(
   "/:paymentId/refund",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("paymentManagement"),
   validate(paymentIdParamValidation, "params"),
   validate(refundPaymentValidation),
   controller.refundPayment,
