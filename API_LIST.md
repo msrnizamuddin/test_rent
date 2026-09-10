@@ -514,6 +514,31 @@ driver has at least one `Document` row (see Document module §11). Succeeding al
 ```
 (`updatedBy` is likewise injected server-side now, not sent by the client.)
 
+**RBAC enforcement:** a superadmin passes every check below unconditionally.
+A manager is only let through a module's write routes (and, for `reports`,
+its read routes too) when their stored `permissions[moduleKey]` is `true` —
+enforced by the `authorizePermission(moduleKey)` middleware
+(`v1/middleware/authenticate.middleware.js`), which reads `req.user.permissions`
+(now attached by `authenticate` on every request, alongside `id`/`role`).
+Any other role (`driver`, `customer`) is rejected outright, same as a bare
+`authorize()` would. Module keys currently wired to real routes:
+
+| Permission key      | Gates                                                        |
+| -------------------- | ------------------------------------------------------------ |
+| `vehicleManagement`  | Vehicle module writes + Vehicle Category module writes        |
+| `driverManagement`   | Trip module's admin routes (list/get-all/cancel a trip)       |
+| `bookingManagement`  | Rental Request module's admin routes (list, assign, review, confirm, reject) |
+| `paymentManagement`  | Payment module's admin routes (list, update status, refund)   |
+| `reports`            | The whole Report module                                       |
+| `settings`           | Offer module writes + Tourist Spot module writes               |
+| `userManagement`     | Reserved — not currently gating anything on its own; `GET/PATCH /users*` stay a coarse superadmin-or-manager check since that one endpoint backs several unrelated admin screens (Drivers, Customers, Admin Users) each filtered by a different `?role=`, so it can't cleanly map to one module. Creating staff (§1.15) and changing anyone's role/permissions/status (this section) stay superadmin-only regardless of `userManagement` — a manager can never grant itself or anyone else more access. |
+
+Modules with no row above (Document, Location, Invoice, Notification,
+Review, Maintenance, Dashboard, Ticket, Audit Log, Pricing, Setting) are
+unchanged — still the original coarse `authorize("superadmin", "manager")`
+(or superadmin-only) role check, not yet split out into their own
+permission key.
+
 ---
 
 ### 1.19 Deactivate Account

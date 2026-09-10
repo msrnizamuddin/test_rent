@@ -15,6 +15,7 @@ import { validate } from "../../../middleware/validate.middleware.js";
 import {
   authenticate,
   authorize,
+  authorizePermission,
   requireVerifiedDriver,
 } from "../../../middleware/authenticate.middleware.js";
 
@@ -41,13 +42,13 @@ router.get(
 router.get(
   "/",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("driverManagement"),
   validate(listTripsValidation, "query"),
   controller.listTrips,
 );
 
 // Safe "get everything" — no filters, no conditions.
-router.get("/all", authenticate, authorize("superadmin", "manager"), controller.getAll);
+router.get("/all", authenticate, authorizePermission("driverManagement"), controller.getAll);
 
 // ---------------- 15. Driver: Status Transitions ----------------
 router.patch(
@@ -75,7 +76,7 @@ router.patch(
 router.patch(
   "/:tripId/cancel",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("driverManagement"),
   validate(tripIdParamValidation, "params"),
   validate(cancelTripValidation),
   controller.cancelTrip,

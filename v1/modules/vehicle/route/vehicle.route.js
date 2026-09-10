@@ -11,7 +11,7 @@ import {
 import { validate } from "../../../middleware/validate.middleware.js";
 import {
   authenticate,
-  authorize,
+  authorizePermission,
 } from "../../../middleware/authenticate.middleware.js";
 
 const router = express.Router();
@@ -20,7 +20,7 @@ const router = express.Router();
 router.get(
   "/all",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("vehicleManagement"),
   controller.getAll,
 );
 
@@ -34,7 +34,7 @@ router.get(
 router.post(
   "/",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("vehicleManagement"),
   validate(createVehicleValidation),
   controller.createVehicle,
 );
@@ -42,7 +42,7 @@ router.post(
 router.patch(
   "/:vehicleId",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("vehicleManagement"),
   validate(vehicleIdParamValidation, "params"),
   validate(updateVehicleValidation),
   controller.updateVehicle,
@@ -51,7 +51,7 @@ router.patch(
 router.delete(
   "/:vehicleId",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("vehicleManagement"),
   validate(vehicleIdParamValidation, "params"),
   controller.deleteVehicle,
 );

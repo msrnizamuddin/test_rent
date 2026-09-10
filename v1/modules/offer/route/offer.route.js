@@ -11,7 +11,7 @@ import {
 import { validate } from "../../../middleware/validate.middleware.js";
 import {
   authenticate,
-  authorize,
+  authorizePermission,
 } from "../../../middleware/authenticate.middleware.js";
 
 const router = express.Router();
@@ -28,7 +28,7 @@ router.get(
 router.post(
   "/",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("settings"),
   validate(createOfferValidation),
   controller.createOffer,
 );
@@ -36,7 +36,7 @@ router.post(
 router.patch(
   "/:offerId",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("settings"),
   validate(offerIdParamValidation, "params"),
   validate(updateOfferValidation),
   controller.updateOffer,
@@ -45,7 +45,7 @@ router.patch(
 router.delete(
   "/:offerId",
   authenticate,
-  authorize("superadmin", "manager"),
+  authorizePermission("settings"),
   validate(offerIdParamValidation, "params"),
   controller.deleteOffer,
 );

@@ -3,7 +3,7 @@ import * as controller from "../controller/report.controller.js";
 
 import {
   authenticate,
-  authorize,
+  authorizePermission,
 } from "../../../middleware/authenticate.middleware.js";
 
 const router = express.Router();
@@ -13,7 +13,7 @@ const router = express.Router();
 // independently — pagination, date-range filters, CSV export, per-manager
 // "Assigned" scoping (spec module 32) — without dragging the lightweight
 // dashboard overview along with it.
-router.use(authenticate, authorize("superadmin", "manager"));
+router.use(authenticate, authorizePermission("reports"));
 
 router.get("/users", controller.getUserReport);
 router.get("/vehicles", controller.getVehicleReport);

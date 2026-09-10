@@ -32,7 +32,7 @@ export const authenticate = async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { id: true, role: true, centralStatus: true, isVerified: true },
+      select: { id: true, role: true, centralStatus: true, isVerified: true, permissions: true },
     });
 
     if (!user || user.centralStatus !== "active") {
@@ -41,7 +41,12 @@ export const authenticate = async (req, res, next) => {
         .json({ success: false, message: "Session is no longer valid, please log in again" });
     }
 
-    req.user = { id: user.id, role: user.role, isVerified: user.isVerified };
+    req.user = {
+      id: user.id,
+      role: user.role,
+      isVerified: user.isVerified,
+      permissions: user.permissions || {},
+    };
     next();
   } catch (err) {
     next(err);
@@ -55,6 +60,29 @@ export const authorize = (...allowedRoles) => {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
     next();
+  };
+};
+
+// RBAC gate for a manager's fine-grained module access (see auth.validation.js's
+// permissionsSchema for the fixed module key list — userManagement,
+// vehicleManagement, driverManagement, bookingManagement, paymentManagement,
+// reports, settings). A superadmin always passes, unconditionally, regardless
+// of what's stored in their permissions — they aren't subject to RBAC. A
+// manager passes only if permissions[moduleKey] === true. Every other role
+// (driver, customer) is rejected outright, same as a bare authorize() would.
+// Usage: authorizePermission("vehicleManagement")
+export const authorizePermission = (moduleKey) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Not authenticated" });
+    }
+    if (req.user.role === "superadmin") return next();
+    if (req.user.role === "manager" && req.user.permissions?.[moduleKey] === true) {
+      return next();
+    }
+    return res
+      .status(403)
+      .json({ success: false, message: "You don't have permission to perform this action" });
   };
 };
 
